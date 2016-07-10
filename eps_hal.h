@@ -107,11 +107,12 @@
 #define AIN_A_EXT5_ADDR		9
 //-----------------------------------------------------------
 //battery voltage threshold levels
-#define THRESHOLD_80	585	 	//80% of charge (100% is 4.2V & 636 adc counts)
-#define THRESHOLD_60	534		//60% of charge
-#define THRESHOLD_40	481		//40% of charge
-#define THRESHOLD_20	430		//20% of charge (0% is 2.5V)
-#define THRESHOLD_0		378		//0% of charge
+#define THRESHOLD_80	3800	 	//80% of charge (100% is 4.2V & 636 adc counts)
+#define THRESHOLD_60	3250		//60% of charge
+#define THRESHOLD_40	3000		//40% of charge
+#define THRESHOLD_20	2800		//20% of charge (0% is 2.5V)
+#define THRESHOLD_10	2700		//20% of charge (0% is 2.5V)
+#define THRESHOLD_0		2600		//0% of charge
 //battery temperature thresholds in ADC counts
 #define COLD_20			385		//too cold for charging
 #define COLD_0			672		//ok for charging
@@ -139,7 +140,6 @@ void ADC_update();
 float ADC_read(int channel);
 
 void module_set_state(int module_number, char state);
-void module_update();
 
 //TODO s:
 //module interface

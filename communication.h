@@ -8,8 +8,8 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
-void i2c_callback(char *buffer);
-void i2c_check_command(); // sets the response.
+//void i2c_callback(char *buffer);
+int i2c_respond_command(); // reacts to i2c commands, updating eps state
 int mainboard_poke_iterate(int *mainboard_poke_counter);
 
 //offer callback function

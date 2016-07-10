@@ -77,6 +77,7 @@
 #include <stdint.h>
 #include "eps_hal.h"
 #include "communication.h"
+#include "state_machine.h"
 
 void init_eps()
 {
@@ -109,11 +110,14 @@ int main(void)
 
 	while (1) //execute once, then enter sleep mode until timer interrupt
 	{
-		mainboard_poke_iterate(&mainboard_poke_counter);
-		ADC_update();
-		//i2c_update();
-		//eps_update();
-		//i2c_respond();
+		mainboard_poke_iterate(&mainboard_poke_counter); //revive mainboard
+		ADC_update(); //get ADC values
+		eps_update_values();
+		if(i2c_respond_command()) //respond to received messages and reset poke counter as MB still alive
+		{
+			mainboard_poke_counter = 0;
+		}
+		eps_update_states(); //update eps state according to received commands and measured analog values
 		__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts
 		__no_operation();                       // Set breakpoint >>here<< and read
 	}
