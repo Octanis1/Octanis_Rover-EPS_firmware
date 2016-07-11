@@ -94,7 +94,8 @@ void init_eps()
 	timer0_A_init();
 
 	//enable mainboard
-	//TODO
+	module_set_state(M_M, 1);
+	module_status[M_M] = MODULE_ON;
 
 	//enable interrupts
 	__bis_SR_register(GIE);

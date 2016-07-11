@@ -25,7 +25,7 @@
 #define M_11			5
 #define H_T1			6
 #define H_T2			7
-#define H_T3			8
+#define BUZZER			8
 
 #define ON		1
 // turning a module off is always allowed

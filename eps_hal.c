@@ -21,16 +21,16 @@ float ADC_result[ANALOG_PORTS];
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 void gpio_init()
 {
-	//TODO amke dependent of definitions
+	//TODO make dependent of definitions
 	//P1OUT = 0xC0; //uncomment if internal i2c pullup required
 	//P1REN = 0xC0;
 	P1DIR = 0x00; //all inputs
 	P1SEL0 = 0x3f; //p1.0-5 a0-a5, p1.6-7 i2c
 	P1SEL1 = 0xff;
 
-	P2OUT = 0x00; //external digital, default all pulldown inpputs
-	P2REN = 0xff;
-	P2DIR = 0x00;
+	P2OUT = 0x00; //external digital, default all pulldown inputs except 5 -> buzzer
+	P2REN = 0xdf;
+	P2DIR = 0x20;
 	P2SEL0 = 0x00; //standard gpio
 	P2SEL1 = 0x00;
 
@@ -179,7 +179,7 @@ void ADC_init()
 {
 
 	//adc_status = IDLE;
-	//reference voltage
+	//reference voltage (2.5V)
 	REFCTL0 = REFVSEL_2;
 	//4 adclock sh, msc set, adcon;
 	ADC12CTL0 = ADC12SHT1_0 + ADC12SHT1_0 + ADC12MSC + ADC12ON;
@@ -306,7 +306,7 @@ void module_set_state(int module_number, char state)
 			if(state) SET_PIN(PORT_HEATER_2_EN, PIN_HEATER_2_EN);
 			else CLR_PIN(PORT_HEATER_2_EN, PIN_HEATER_2_EN);
 			break;
-		case H_T3:
+		case BUZZER:
 			if(state) SET_PIN(PORT_HEATER_3_EN, PIN_HEATER_3_EN);
 			else CLR_PIN(PORT_HEATER_3_EN, PIN_HEATER_3_EN);
 			break;
