@@ -48,7 +48,7 @@ void eps_update_states()
 		}
 	}
 
-	if(eps_status.v_bat < THRESHOLD_20)
+	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD)
 	{
 		//Start buzzing
 		if(module_status[BUZZER] == MODULE_OFF)
@@ -80,7 +80,7 @@ void eps_update_states()
 			module_status[i] = MODULE_OFF;
 		}
 	}
-	else if(eps_status.v_bat < THRESHOLD_10) //low bat voltage threshold
+	else if(eps_status.v_bat < ALL_OFF_THRESHOLD) //low bat voltage threshold
 	{
 		//turn off all modules except mb
 		for(i = 0; i < N_MODULES; i++)
@@ -98,16 +98,16 @@ void eps_update_states()
 		if(eps_status.t_bat < -1000)
 		{
 			//turn on heater
-			module_set_state(H_T1, 1);
-			module_status[H_T1] = MODULE_ON;
+			module_set_state(H_T3, 1);
+			module_status[H_T3] = MODULE_ON;
 			module_set_state(H_T2, 1);
 			module_status[H_T2] = MODULE_ON;
 		}
 		else if(eps_status.t_bat > -500)
 		{
 			//turn off heater
-			module_set_state(H_T1, 0);
-			module_status[H_T1] = MODULE_OFF;
+			module_set_state(H_T3, 0);
+			module_status[H_T3] = MODULE_OFF;
 			module_set_state(H_T2, 0);
 			module_status[H_T2] = MODULE_OFF;
 		}
@@ -117,16 +117,16 @@ void eps_update_states()
 		if(eps_status.t_bat < -500)
 		{
 			//turn on heater
-			module_set_state(H_T1, 1);
-			module_status[H_T1] = MODULE_ON;
+			module_set_state(H_T3, 1);
+			module_status[H_T3] = MODULE_ON;
 			module_set_state(H_T2, 1);
 			module_status[H_T2] = MODULE_ON;
 		}
 		else if(eps_status.t_bat > 0)
 		{
 			//turn off heater
-			module_set_state(H_T1, 0);
-			module_status[H_T1] = MODULE_OFF;
+			module_set_state(H_T3, 0);
+			module_status[H_T3] = MODULE_OFF;
 			module_set_state(H_T2, 0);
 			module_status[H_T2] = MODULE_OFF;
 		}

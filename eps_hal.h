@@ -29,9 +29,9 @@
 	#define M_5_GPS			M_5
 	#define M_5_RPI			M_11
 #endif
-#define H_T1			6
+#define BUZZER		6
 #define H_T2			7
-#define BUZZER			8
+#define 	H_T3			8
 
 #define ON		1
 // turning a module off is always allowed
@@ -112,13 +112,24 @@
 #define AIN_A_EXT4_ADDR		8
 #define AIN_A_EXT5_ADDR		9
 //-----------------------------------------------------------
-//battery voltage threshold levels
-#define THRESHOLD_80	3800	 	//80% of charge (100% is 4.2V & 636 adc counts)
-#define THRESHOLD_60	3250		//60% of charge
-#define THRESHOLD_40	3000		//40% of charge
-#define THRESHOLD_20	2800		//20% of charge (0% is 2.5V)
-#define THRESHOLD_10	2700		//20% of charge (0% is 2.5V)
-#define THRESHOLD_0		2600		//0% of charge
+//battery voltage threshold levels (0%: 3V [for testing at ambient temperature]; 100% = 4.1V)
+#define THRESHOLD_80	3880	 	//80% of charge (100% is 4.1V & 636 adc counts)
+#define THRESHOLD_60	3660		//60% of charge
+#define THRESHOLD_40	3440		//40% of charge
+#define THRESHOLD_20	3220		//20% of charge
+#define THRESHOLD_10	3110		//10% of charge
+#define THRESHOLD_5	3055		//5% of charge
+#define THRESHOLD_0	3000		//0% of charge
+
+#define BUZZER_THRESHOLD		THRESHOLD_10
+#define ALL_OFF_THRESHOLD	THRESHOLD_5
+
+//#define THRESHOLD_80	3800	 	//80% of charge (100% is 4.2V & 636 adc counts)
+//#define THRESHOLD_60	3250		//60% of charge
+//#define THRESHOLD_40	3000		//40% of charge
+//#define THRESHOLD_20	2800		//20% of charge (0% is 2.5V)
+//#define THRESHOLD_10	2700		//20% of charge (0% is 2.5V)
+//#define THRESHOLD_0		2600		//0% of charge
 //battery temperature thresholds in ADC counts
 #define COLD_20			385		//too cold for charging
 #define COLD_0			672		//ok for charging

@@ -298,7 +298,7 @@ void module_set_state(int module_number, char state)
 			if(state) SET_PIN(PORT_SC_EN, PIN_SC_EN);
 			else CLR_PIN(PORT_SC_EN, PIN_SC_EN);
 			break;
-		case H_T1:
+		case BUZZER:
 			if(state) SET_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
 			else CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
 			break;
@@ -306,7 +306,7 @@ void module_set_state(int module_number, char state)
 			if(state) SET_PIN(PORT_HEATER_2_EN, PIN_HEATER_2_EN);
 			else CLR_PIN(PORT_HEATER_2_EN, PIN_HEATER_2_EN);
 			break;
-		case BUZZER:
+		case H_T3:
 			if(state) SET_PIN(PORT_HEATER_3_EN, PIN_HEATER_3_EN);
 			else CLR_PIN(PORT_HEATER_3_EN, PIN_HEATER_3_EN);
 			break;
