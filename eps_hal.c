@@ -278,23 +278,23 @@ void module_set_state(int module_number, char state)
 			if(state) CLR_PIN(PORT_3V3_M_EN, PIN_3V3_M_EN);
 			else SET_PIN(PORT_3V3_M_EN, PIN_3V3_M_EN);
 			break;
-		case M_SC:
+		case M_331:
 			if(state) SET_PIN(PORT_3V3_1_EN, PIN_3V3_1_EN);
 			else CLR_PIN(PORT_3V3_1_EN, PIN_3V3_1_EN);
 			break;
-		case M_331:
+		case M_332:
 			if(state) SET_PIN(PORT_3V3_2_EN, PIN_3V3_2_EN);
 			else CLR_PIN(PORT_3V3_2_EN, PIN_3V3_2_EN);
 			break;
-		case M_332:
+		case M_5:
 			if(state) SET_PIN(PORT_5V_EN, PIN_5V_EN);
 			else CLR_PIN(PORT_5V_EN, PIN_5V_EN);
 			break;
-		case M_5:
+		case M_11:
 			if(state) SET_PIN(PORT_11V_EN, PIN_11V_EN);
 			else CLR_PIN(PORT_11V_EN, PIN_11V_EN);
 			break;
-		case M_11:
+		case M_SC:
 			if(state) SET_PIN(PORT_SC_EN, PIN_SC_EN);
 			else CLR_PIN(PORT_SC_EN, PIN_SC_EN);
 			break;

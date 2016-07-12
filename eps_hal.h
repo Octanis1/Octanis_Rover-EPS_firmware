@@ -8,6 +8,8 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
+#define FIRMWARE_BASE_STATION 	1
+
 #include <msp430fr5969.h>
 
 //---------------------------------------------------------------
@@ -18,11 +20,15 @@
 #define N_MODULES	9
 //indexes:
 #define M_M			0
-#define M_SC		1
+#define M_SC			1
 #define M_331		2
 #define M_332		3
 #define M_5			4
 #define M_11			5
+#ifdef FIRMWARE_BASE_STATION
+	#define M_5_GPS			M_5
+	#define M_5_RPI			M_11
+#endif
 #define H_T1			6
 #define H_T2			7
 #define BUZZER			8

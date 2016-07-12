@@ -93,9 +93,17 @@ void init_eps()
 	//init timers
 	timer0_A_init();
 
+#ifdef FIRMWARE_BASE_STATION
+	//enable both 5V sources:
+	module_set_state(M_5_GPS, 1);
+	module_status[M_5_GPS] = MODULE_ON;
+	module_set_state(M_5_RPI, 1);
+	module_status[M_5_RPI] = MODULE_ON;
+#else
 	//enable mainboard
 	module_set_state(M_M, 1);
 	module_status[M_M] = MODULE_ON;
+#endif
 
 	//enable interrupts
 	__bis_SR_register(GIE);
@@ -104,6 +112,8 @@ void init_eps()
 int main(void)
 {
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
+    PM5CTL0 &= ~LOCKLPM5;         // Disable the GPIO power-on default high-impedance mode
+                                     // to activate previously configured port settings
 
     int mainboard_poke_counter = 0;
 	
