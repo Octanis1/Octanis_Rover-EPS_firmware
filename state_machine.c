@@ -10,7 +10,7 @@ void eps_update_values()
 	//TODO: Conversion
 	eps_status.v_bat = (uint16_t)(ADC_read(AIN_V_BAT_ADDR) * 5000.0f / 4096.0f);
 	eps_status.t_bat = (int16_t)((ADC_read(AIN_A_EXT0_ADDR) - 672.0f) * 5000.0f / 635.0f);
-	eps_status.v_solar = (uint16_t)(ADC_read(AIN_V_SC_ADDR) * 8500.0f / 4096.0f);
+	eps_status.v_solar = (uint16_t)(ADC_read(AIN_V_SC_ADDR) * 8250.0f / 4096.0f);
 	eps_status.current_in = (uint16_t)(ADC_read(AIN_I_IN_ADDR) * 5000.0f / 4096.0f);
 	eps_status.current_out = (uint16_t)(ADC_read(AIN_I_OUT_ADDR) * 5000.0f / 4096.0f);
 	eps_status.analog_ext1 = ADC_read(AIN_A_EXT1_ADDR);
@@ -124,8 +124,8 @@ void eps_update_states()
 		for(i = 0; i < N_MODULES; i++)
 		{
 			//turn off module
-			module_set_state(i, 0);
-			module_status[i] = MODULE_OFF;
+			if(module_status[i] == MODULE_ON)
+				module_status[i] = TURN_OFF;
 		}
 	}
 	else if(eps_status.v_bat < ALL_OFF_THRESHOLD) //low bat voltage threshold
@@ -136,8 +136,8 @@ void eps_update_states()
 			if(i != M_M && i!= BUZZER)
 			{
 				//turn off module
-				module_set_state(i, 0);
-				module_status[i] = MODULE_OFF;
+				if(module_status[i] == MODULE_ON)
+					module_status[i] = TURN_OFF;
 			}
 		}
 	}
