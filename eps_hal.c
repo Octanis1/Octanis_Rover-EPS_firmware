@@ -205,7 +205,7 @@ void ADC_init()
 //	ADC12MCTL9 = ADC12VRSEL_1 + AIN_A_EXT5_CH + ADC12EOS;
 
 	// interrupt
-	ADC12IER0 = 0x0200; //interrupt generated after conversion of last value
+	ADC12IER0 = ADC12IE5; //interrupt generated after conversion of last value (i.e. ADC channel 5)
 }
 
 void ADC_update()
