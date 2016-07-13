@@ -188,12 +188,12 @@ void eps_update_user_interface()
 
 	//check button:
 	static uint8_t time_button_pressed = 0;
-	if(PORT_DIGITAL_IN && PIN_DIGITAL_6)
+	if(PORT_DIGITAL_IN & PIN_DIGITAL_6)
 		time_button_pressed = 0;
 	else
 		time_button_pressed += 1;
 
-	if(time_button_pressed > 2) //at least 3 seconds
+	if(time_button_pressed > 5) //at least 3 seconds
 	{
 		//always assume GPS and RPI have the same state! GPS waits for RPI to turn on/off completely untill it can change state again.
 		if(module_status[M_5_RPI] == MODULE_ON)

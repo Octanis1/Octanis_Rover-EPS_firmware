@@ -132,7 +132,7 @@
 #define BAT_FULL		4100
 #define BAT_EMPTY	3000
 
-#define BAT_FS		BAT_FULL-BAT_EMPTY
+#define BAT_FS		(BAT_FULL-BAT_EMPTY)
 
 #define THRESHOLD_95		(uint16_t)(BAT_EMPTY+0.95*BAT_FS) 		//95% of charge (100% is 4.1V & 636 adc counts)
 #define THRESHOLD_80		(uint16_t)(BAT_EMPTY+0.80*BAT_FS)	 	//80% of charge (100% is 4.1V & 636 adc counts)

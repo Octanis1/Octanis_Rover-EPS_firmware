@@ -320,7 +320,7 @@ int module_update_shutdown_signal(int module_number, char state){
 	if(state == START_SHUTDOWN)
 	{
 		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
-		if((PORT_BOOT_STATE && PIN_BOOT_STATE) == 0)
+		if((PORT_BOOT_STATE & PIN_BOOT_STATE) == 0)
 			return SHUTDOWN_COMPLETE;
 		else
 			return START_SHUTDOWN;
@@ -328,7 +328,7 @@ int module_update_shutdown_signal(int module_number, char state){
 	else if(state == START_BOOT)
 	{
 		CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
-		if((PORT_BOOT_STATE && PIN_BOOT_STATE))
+		if((PORT_BOOT_STATE & PIN_BOOT_STATE))
 			return SYSTEM_ON;
 		else
 			return START_BOOT;
