@@ -203,20 +203,13 @@ void eps_update_user_interface()
 		}
 		else if(module_status[M_5_RPI] == MODULE_OFF)
 		{
-			module_set_state(M_5_RPI, 1);
-			module_status[M_5_RPI] = TURN_ON;
+			if(eps_status.v_bat > BOOT_THRESHOLD)
+			{
+				module_status[M_5_RPI] = TURN_ON;
+				module_status[M_5_GPS] = TURN_ON;
+			}
 		}
 
-		if(module_status[M_5_GPS] == MODULE_ON)
-		{
-
-			module_status[M_5_GPS] = MODULE_OFF;
-		}
-		else
-		{
-			module_set_state(M_5_GPS, 1);
-			module_status[M_5_GPS] = MODULE_ON;
-		}
 		time_button_pressed = 0;
 	}
 

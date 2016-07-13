@@ -93,16 +93,18 @@ void init_eps()
 	//init timers
 	timer0_A_init();
 
+	//enable interrupts
+	__bis_SR_register(GIE);
+
 #ifdef FIRMWARE_BASE_STATION
 	//enable both 5V sources, if battery voltage allows it:
 	ADC_update(); //get ADC values
 	eps_update_values();
-	if(eps_status.v_bat > THRESHOLD_40)
+
+	if(eps_status.v_bat > BOOT_THRESHOLD)
 	{
-		module_set_state(M_5_GPS, 1);
-		module_status[M_5_GPS] = MODULE_ON;
-		module_set_state(M_5_RPI, 1);
-		module_status[M_5_RPI] = MODULE_ON;
+		module_status[M_5_GPS] = TURN_ON;
+		module_status[M_5_RPI] = TURN_ON;
 	}
 #else
 	//enable mainboard
@@ -110,8 +112,7 @@ void init_eps()
 	module_status[M_M] = MODULE_ON;
 #endif
 
-	//enable interrupts
-	__bis_SR_register(GIE);
+
 }
 
 int main(void)

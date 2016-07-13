@@ -143,6 +143,7 @@
 #define THRESHOLD_5		(uint16_t)(BAT_EMPTY+0.05*BAT_FS)		//5% of charge
 #define THRESHOLD_0		(uint16_t)(BAT_EMPTY)					//0% of charge
 
+#define BOOT_THRESHOLD		THRESHOLD_20 //minimum v_bat to start booting the raspi or olimex
 #define BUZZER_THRESHOLD		THRESHOLD_10
 #define ALL_OFF_THRESHOLD	THRESHOLD_5
 

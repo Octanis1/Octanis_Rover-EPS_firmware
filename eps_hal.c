@@ -22,7 +22,7 @@ float ADC_result[ANALOG_PORTS];
 void gpio_init()
 {
 	//TODO make dependent of definitions
-	P1OUT = 0x00; //uncomment if internal i2c pullup required
+	P1OUT = 0x00;
 	P1REN = 0x00;
 	//P1OUT = 0xC0; //uncomment if internal i2c pullup required
 	//P1REN = 0xC0;
