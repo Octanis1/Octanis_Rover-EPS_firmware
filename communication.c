@@ -130,15 +130,15 @@ int i2c_respond_command() // sets the response.
 			case AEXT1:
 				i2c_send(eps_status.analog_ext1_8);
 				break;
-			case AEXT2:
-				i2c_send(eps_status.analog_ext2_8);
-				break;
-			case AEXT3:
-				i2c_send(eps_status.analog_ext3_8);
-				break;
-			case AEXT4:
-				i2c_send(eps_status.analog_ext4_8);
-				break;
+//			case AEXT2:
+//				i2c_send(eps_status.analog_ext2_8);
+//				break;
+//			case AEXT3:
+//				i2c_send(eps_status.analog_ext3_8);
+//				break;
+//			case AEXT4:
+//				i2c_send(eps_status.analog_ext4_8);
+//				break;
 			case T_BAT:
 				i2c_send(eps_status.t_bat_8);
 				break;

@@ -14,9 +14,9 @@ void eps_update_values()
 	eps_status.current_in = (uint16_t)(ADC_read(AIN_I_IN_ADDR) * 5000.0f / 4096.0f);
 	eps_status.current_out = (uint16_t)(ADC_read(AIN_I_OUT_ADDR) * 5000.0f / 4096.0f);
 	eps_status.analog_ext1 = ADC_read(AIN_A_EXT1_ADDR);
-	eps_status.analog_ext2 = ADC_read(AIN_A_EXT2_ADDR);
-	eps_status.analog_ext3 = ADC_read(AIN_A_EXT3_ADDR);
-	eps_status.analog_ext4 = ADC_read(AIN_A_EXT4_ADDR);
+//	eps_status.analog_ext2 = ADC_read(AIN_A_EXT2_ADDR);
+//	eps_status.analog_ext3 = ADC_read(AIN_A_EXT3_ADDR);
+//	eps_status.analog_ext4 = ADC_read(AIN_A_EXT4_ADDR);
 
 	eps_status.v_bat_8 = (uint8_t)(eps_status.v_bat/100);
 	eps_status.t_bat_8 = (int8_t)(eps_status.t_bat/100);
@@ -24,9 +24,9 @@ void eps_update_values()
 	eps_status.current_in_8 = (uint8_t)(eps_status.current_in/100);
 	eps_status.current_out_8 = (uint8_t)(eps_status.current_out/100);
 	eps_status.analog_ext1_8 = (uint8_t)(eps_status.analog_ext1 >> 8);
-	eps_status.analog_ext2_8 = (uint8_t)(eps_status.analog_ext2 >> 8);
-	eps_status.analog_ext3_8 = (uint8_t)(eps_status.analog_ext3 >> 8);
-	eps_status.analog_ext4_8 = (uint8_t)(eps_status.analog_ext4 >> 8);
+//	eps_status.analog_ext2_8 = (uint8_t)(eps_status.analog_ext2 >> 8);
+//	eps_status.analog_ext3_8 = (uint8_t)(eps_status.analog_ext3 >> 8);
+//	eps_status.analog_ext4_8 = (uint8_t)(eps_status.analog_ext4 >> 8);
 }
 
 void eps_update_states()

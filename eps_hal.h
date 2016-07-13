@@ -87,7 +87,7 @@
 
 #define POKE_COUNTER_LIMIT	5
 
-#define ANALOG_PORTS		10
+#define ANALOG_PORTS		6//10
 #define ANALOG_NUM_AVG		16
 
 #define AIN_I_OUT_CH		0
@@ -96,10 +96,10 @@
 #define AIN_V_BAT_CH		3
 #define AIN_A_EXT0_CH		4
 #define AIN_A_EXT1_CH		5
-#define AIN_A_EXT2_CH		8
-#define AIN_A_EXT3_CH		9
-#define AIN_A_EXT4_CH		10
-#define AIN_A_EXT5_CH		11
+//#define AIN_A_EXT2_CH		8
+//#define AIN_A_EXT3_CH		9
+//#define AIN_A_EXT4_CH		10
+//#define AIN_A_EXT5_CH		11
 
 #define AIN_I_OUT_ADDR		0
 #define AIN_I_IN_ADDR		1
@@ -107,10 +107,10 @@
 #define AIN_V_BAT_ADDR		3
 #define AIN_A_EXT0_ADDR		4
 #define AIN_A_EXT1_ADDR		5
-#define AIN_A_EXT2_ADDR		6
-#define AIN_A_EXT3_ADDR		7
-#define AIN_A_EXT4_ADDR		8
-#define AIN_A_EXT5_ADDR		9
+//#define AIN_A_EXT2_ADDR		6
+//#define AIN_A_EXT3_ADDR		7
+//#define AIN_A_EXT4_ADDR		8
+//#define AIN_A_EXT5_ADDR		9
 //-----------------------------------------------------------
 //battery voltage threshold levels (0%: 3V [for testing at ambient temperature]; 100% = 4.1V)
 #define THRESHOLD_80	3880	 	//80% of charge (100% is 4.1V & 636 adc counts)
