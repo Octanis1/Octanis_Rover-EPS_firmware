@@ -94,11 +94,16 @@ void init_eps()
 	timer0_A_init();
 
 #ifdef FIRMWARE_BASE_STATION
-	//enable both 5V sources:
-	module_set_state(M_5_GPS, 1);
-	module_status[M_5_GPS] = MODULE_ON;
-	module_set_state(M_5_RPI, 1);
-	module_status[M_5_RPI] = MODULE_ON;
+	//enable both 5V sources, if battery voltage allows it:
+	ADC_update(); //get ADC values
+	eps_update_values();
+	if(eps_status.v_bat > THRESHOLD_40)
+	{
+		module_set_state(M_5_GPS, 1);
+		module_status[M_5_GPS] = MODULE_ON;
+		module_set_state(M_5_RPI, 1);
+		module_status[M_5_RPI] = MODULE_ON;
+	}
 #else
 	//enable mainboard
 	module_set_state(M_M, 1);
@@ -128,7 +133,8 @@ int main(void)
 		{
 			mainboard_poke_counter = 0;
 		}
-		eps_update_states(); //update eps state according to received commands and measured analog values
+		eps_update_states(); //update eps state according to received commands and measured analog values; if necessary, trigger interrupt for powered modules before shutting them down.
+		eps_update_user_interface(); //all the status leds and buttons
 		__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts
 		__no_operation();                       // Set breakpoint >>here<< and read
 	}

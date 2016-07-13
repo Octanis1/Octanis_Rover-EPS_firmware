@@ -22,15 +22,17 @@ float ADC_result[ANALOG_PORTS];
 void gpio_init()
 {
 	//TODO make dependent of definitions
+	P1OUT = 0x00; //uncomment if internal i2c pullup required
+	P1REN = 0x00;
 	//P1OUT = 0xC0; //uncomment if internal i2c pullup required
 	//P1REN = 0xC0;
 	P1DIR = 0x00; //all inputs
 	P1SEL0 = 0x3f; //p1.0-5 a0-a5, p1.6-7 i2c
 	P1SEL1 = 0xff;
 
-	P2OUT = 0x00; //external digital, default all pulldown inputs except 5 -> buzzer
-	P2REN = 0xdf;
-	P2DIR = 0x20;
+	P2OUT = BIT4; //external digital, user leds (P2.0,1,3,5,6), user button (P2.4: in, pull-up), rest pulldown (2.2, 2.7)
+	P2REN = 0xff; //is dont care for outputs...
+	P2DIR = BIT0 + BIT1 + BIT3 + BIT5 + BIT6;
 	P2SEL0 = 0x00; //standard gpio
 	P2SEL1 = 0x00;
 
@@ -40,11 +42,11 @@ void gpio_init()
 	P3SEL0 = 0x00; //standard gpio
 	P3SEL1 = 0x00;
 
-	P4OUT = 0x00; //module pin p4.7, external analog p4.0-3, rest pulldown
-	P4REN = 0x70;
-	P4DIR = 0x80;
-	P4SEL0 = 0x0f; //p4.0-3 analog in, rest standard gpio
-	P4SEL1 = 0x0f;
+	P4OUT = 0x00; // module pin p4.7, A8-A11 used as digital GPIOs p4.0-3 (of which p4.3 is shutdown pin, p4.0 MB poke), rest pulldown
+	P4REN = 0xff; // all pulldowns
+	P4DIR = 0x89; // module pin 4.7, shutdown pin 4.3, mainboard poke 4.0
+	P4SEL0 = 0x00; // standard gpio
+	P4SEL1 = 0x00;
 
 	PJOUT = 0x00; //heater pins pj.0-2, pulldown on pj.3
 	PJREN = 0x08;
@@ -196,11 +198,11 @@ void ADC_init()
 	ADC12MCTL2 = ADC12VRSEL_1 + AIN_V_SC_CH;
 	ADC12MCTL3 = ADC12VRSEL_1 + AIN_V_BAT_CH;
 	ADC12MCTL4 = ADC12VRSEL_1 + AIN_A_EXT0_CH;
-	ADC12MCTL5 = ADC12VRSEL_1 + AIN_A_EXT1_CH;
-	ADC12MCTL6 = ADC12VRSEL_1 + AIN_A_EXT2_CH;
-	ADC12MCTL7 = ADC12VRSEL_1 + AIN_A_EXT3_CH;
-	ADC12MCTL8 = ADC12VRSEL_1 + AIN_A_EXT4_CH;
-	ADC12MCTL9 = ADC12VRSEL_1 + AIN_A_EXT5_CH + ADC12EOS;
+	ADC12MCTL5 = ADC12VRSEL_1 + AIN_A_EXT1_CH + ADC12EOS;
+//	ADC12MCTL6 = ADC12VRSEL_1 + AIN_A_EXT2_CH;
+//	ADC12MCTL7 = ADC12VRSEL_1 + AIN_A_EXT3_CH;
+//	ADC12MCTL8 = ADC12VRSEL_1 + AIN_A_EXT4_CH;
+//	ADC12MCTL9 = ADC12VRSEL_1 + AIN_A_EXT5_CH + ADC12EOS;
 
 	// interrupt
 	ADC12IER0 = 0x0200; //interrupt generated after conversion of last value
@@ -251,10 +253,10 @@ __interrupt void ADC_ISR ()
 	ADC_sum[3] += ADC12MEM3;
 	ADC_sum[4] += ADC12MEM4;
 	ADC_sum[5] += ADC12MEM5;
-	ADC_sum[6] += ADC12MEM6;
-	ADC_sum[7] += ADC12MEM7;
-	ADC_sum[8] += ADC12MEM8;
-	ADC_sum[9] += ADC12MEM9;
+//	ADC_sum[6] += ADC12MEM6;
+//	ADC_sum[7] += ADC12MEM7;
+//	ADC_sum[8] += ADC12MEM8;
+//	ADC_sum[9] += ADC12MEM9;
 
 	if(++ADC_summing < ANALOG_NUM_AVG)
 	{
@@ -311,4 +313,26 @@ void module_set_state(int module_number, char state)
 			else CLR_PIN(PORT_HEATER_3_EN, PIN_HEATER_3_EN);
 			break;
 	}
+}
+
+int module_update_shutdown_signal(int module_number, char state){
+
+	if(state == START_SHUTDOWN)
+	{
+		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
+		if((PORT_BOOT_STATE && PIN_BOOT_STATE) == 0)
+			return SHUTDOWN_COMPLETE;
+		else
+			return START_SHUTDOWN;
+	}
+	else if(state == START_BOOT)
+	{
+		CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
+		if((PORT_BOOT_STATE && PIN_BOOT_STATE))
+			return SYSTEM_ON;
+		else
+			return START_BOOT;
+	}
+	else
+		return UNKNOWN_STATE;
 }
