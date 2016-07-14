@@ -9,8 +9,10 @@
 
 volatile unsigned char RXData[I2C_BUFFER_SIZE];
 volatile unsigned int RXData_ptr_start = 0; //points to oldest, unread char
-volatile unsigned int RXData_ptr_end = 0; //points to free spot
-volatile unsigned char TXData = 0xff;
+volatile unsigned int RXData_ptr_length = 0; //points to free spot
+volatile unsigned char TXData[I2C_BUFFER_SIZE];
+volatile unsigned int TXData_ptr_start = 0; //points to oldest, unread char
+volatile unsigned int TXData_ptr_length = 0; //points to free spot
 
 volatile int ADC_summing = 0; //
 volatile unsigned int ADC_sum[ANALOG_PORTS];
@@ -56,9 +58,57 @@ void gpio_init()
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
-void i2c_send(unsigned char data)
+int i2c_send_byte(unsigned char data, int append)
 {
-	TXData = data;
+	int temp_ptr;
+	//append to buffer
+	if(append)
+	{
+		//check buffer space, return 0 if full
+		if(TXData_ptr_length >= I2C_BUFFER_SIZE)
+		{
+			return 0;
+		}
+
+		//get end of buffer and postincrement length
+		temp_ptr = TXData_ptr_start + TXData_ptr_length++;
+		while(temp_ptr >= I2C_BUFFER_SIZE)
+			temp_ptr = temp_ptr - I2C_BUFFER_SIZE;
+
+		TXData[temp_ptr] = data;
+		return 1;
+	}
+	else //empty and reset buffer and fill first position
+	{
+		TXData[0] = data;
+		TXData_ptr_start = 0;
+		TXData_ptr_length = 1;
+		return 1;
+	}
+}
+
+
+int i2c_send_word(unsigned short data, int append)
+{
+	//Send MSB first, pass on append flag
+	if(i2c_send_byte((unsigned char)(data>>8), append))
+	{
+		//If MSB sent successfully, append LSB
+		if(i2c_send_byte((unsigned char)data, 1))
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+void i2c_clear()
+{
+	//reset send and receive buffer
+	RXData_ptr_start = 0;
+	RXData_ptr_length = 0;
+	TXData_ptr_start = 0;
+	TXData_ptr_length = 0;
 }
 
 void i2c_init()
@@ -74,15 +124,16 @@ void i2c_init()
 
 int i2c_read()
 {
-	char buffer = RXData[RXData_ptr_start];
-	if(RXData_ptr_start != RXData_ptr_end) //data available
+	char temp = RXData[RXData_ptr_start];
+	if(RXData_ptr_length > 0) //data available
 	{
-		//increment pointer as char was read;
+		//increment pointer and decrement length as char was read;
 		RXData_ptr_start++;
+		RXData_ptr_length--;
 		while(RXData_ptr_start >= I2C_BUFFER_SIZE)
 			RXData_ptr_start = RXData_ptr_start - I2C_BUFFER_SIZE;
 		//return char
-		return buffer;
+		return temp;
 	}
 	//return -1 if no char read, unblocking call
 	return -1;
@@ -90,7 +141,7 @@ int i2c_read()
 
 int i2c_glimpse()
 {
-	if(RXData_ptr_start != RXData_ptr_end) //data available
+	if(RXData_ptr_length > 0) //data available
 	{
 		//if bufffer not empty, return char
 		return RXData[RXData_ptr_start];
@@ -101,10 +152,7 @@ int i2c_glimpse()
 
 int i2c_available()
 {
-	int available = RXData_ptr_end - RXData_ptr_start;
-	while(available < 0)
-		available += I2C_BUFFER_SIZE;
-	return available;
+	return RXData_ptr_length;
 }
 
 
@@ -114,22 +162,40 @@ __interrupt void USCI_B0_ISR(void)
 {
 	if(UCB0IFG & UCTXIFG0) //TX
 	{
-		UCB0TXBUF = TXData;                     // TX data to send
+		//hold byte to send in temp
+		char temp = TXData[TXData_ptr_start];
+		if(TXData_ptr_length > 0) //data available, send 0x00 otherwise
+		{
+			//increment pointer and decrement length as char was read;
+			TXData_ptr_start++;
+			TXData_ptr_length--;
+			while(TXData_ptr_start >= I2C_BUFFER_SIZE)
+				TXData_ptr_start = TXData_ptr_start - I2C_BUFFER_SIZE;
+			//return char
+			UCB0TXBUF = temp;
+		}
+		else
+		{
+			UCB0TXBUF = 0x00;
+		}
 	} else //RX
 	{
-		RXData[RXData_ptr_end++] = UCB0RXBUF;	  //read command
-		while(RXData_ptr_end >= I2C_BUFFER_SIZE)
-			RXData_ptr_end = RXData_ptr_end - I2C_BUFFER_SIZE;
 
-		//check if no more space in buffer. if so, overwrite oldest (increment start pointer)
-		if(RXData_ptr_start == RXData_ptr_end)
+		//get end of buffer and postincrement length
+		int temp_ptr = RXData_ptr_start + RXData_ptr_length++;
+		while(temp_ptr >= I2C_BUFFER_SIZE)
+			temp_ptr = temp_ptr - I2C_BUFFER_SIZE;
+
+		RXData[temp_ptr] = UCB0RXBUF;	  //read command
+
+		if(RXData_ptr_length > I2C_BUFFER_SIZE)
 		{
+			RXData_ptr_length--;
 			RXData_ptr_start++;
 			while(RXData_ptr_start >= I2C_BUFFER_SIZE)
 				RXData_ptr_start = RXData_ptr_start - I2C_BUFFER_SIZE;
 		}
-		//check_i2c_command();
-		//TODO: i2c callback?
+
 	}
 }
 

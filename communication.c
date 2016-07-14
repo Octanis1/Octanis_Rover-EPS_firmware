@@ -50,100 +50,100 @@ int i2c_respond_command() // sets the response.
 		{
 			//poke response
 			case ALIVE:
-				i2c_send(COMM_OK);
+				i2c_send_byte(COMM_OK, 0);
 				break;
 			//turn off module
 			case M3V3_1_OFF:
-				i2c_send(COMM_OK);
+				i2c_send_byte(COMM_OK, 0);
 				module_status[M_331] = TURN_OFF;
 				break;
 			case M3V3_2_OFF:
-				i2c_send(COMM_OK);
+				i2c_send_byte(COMM_OK, 0);
 				module_status[M_332] = TURN_OFF;
 				break;
 			case M5V_OFF:
-				i2c_send(COMM_OK);
+				i2c_send_byte(COMM_OK, 0);
 				module_status[M_5] = TURN_OFF;
 				break;
 			case M11V_OFF:
-				i2c_send(COMM_OK);
+				i2c_send_byte(COMM_OK, 0);
 				module_status[M_11] = TURN_OFF;
 				break;
 			// turn on module
 			case M3V3_1_ON:
 				if (eps_status.v_bat > THRESHOLD_10)
 				{
-					i2c_send(COMM_OK);
+					i2c_send_byte(COMM_OK, 0);
 					module_status[M_331] = TURN_ON;
 				}
 				else
 				{
-					i2c_send(LOW_VOLTAGE);
+					i2c_send_byte(LOW_VOLTAGE, 0);
 				}
 				break;
 			case M3V3_2_ON:
 				if (eps_status.v_bat > THRESHOLD_10)
 				{
-					i2c_send(COMM_OK);
+					i2c_send_byte(COMM_OK, 0);
 					module_status[M_332] = TURN_ON;
 				}
 				else
 				{
-					i2c_send(LOW_VOLTAGE);
+					i2c_send_byte(LOW_VOLTAGE, 0);
 				}
 				break;
 			case M5V_ON:
 				if (eps_status.v_bat > THRESHOLD_10)
 				{
-					i2c_send(COMM_OK);
+					i2c_send_byte(COMM_OK, 0);
 					module_status[M_5] = TURN_ON;
 				}
 				else
 				{
-					i2c_send(LOW_VOLTAGE);
+					i2c_send_byte(LOW_VOLTAGE, 0);
 				}
 				break;
 			case M11V_ON:
 				if (eps_status.v_bat > THRESHOLD_10)
 				{
-					i2c_send(COMM_OK);
+					i2c_send_byte(COMM_OK, 0);
 					module_status[M_11] = TURN_ON;
 				}
 				else
 				{
-					i2c_send(LOW_VOLTAGE);
+					i2c_send_byte(LOW_VOLTAGE, 0);
 				}
 				break;
 			//return analog values
 			case V_BAT:
-				i2c_send(eps_status.v_bat_8);
+				i2c_send_word(eps_status.v_bat, 0);
 				break;
 			case V_SC:
-				i2c_send(eps_status.v_solar_8);
+				i2c_send_word(eps_status.v_solar, 0);
 				break;
 			case I_IN:
-				i2c_send(eps_status.current_in_8);
+				i2c_send_word(eps_status.current_in, 0);
 				break;
 			case I_OUT:
-				i2c_send(eps_status.current_out_8);
+				i2c_send_word(eps_status.current_out, 0);
 				break;
 			case AEXT1:
-				i2c_send(eps_status.analog_ext1_8);
+				i2c_send_word(eps_status.analog_ext1, 0);
 				break;
 //			case AEXT2:
-//				i2c_send(eps_status.analog_ext2_8);
+//				i2c_send_word(eps_status.analog_ext2, 0);
 //				break;
 //			case AEXT3:
-//				i2c_send(eps_status.analog_ext3_8);
+//				i2c_send_word(eps_status.analog_ext3, 0);
 //				break;
 //			case AEXT4:
-//				i2c_send(eps_status.analog_ext4_8);
+//				i2c_send_word(eps_status.analog_ext4, 0);
 //				break;
 			case T_BAT:
-				i2c_send(eps_status.t_bat_8);
+				i2c_send_word(eps_status.t_bat, 0);
 				break;
 			//default response to unknown commands
-			default: i2c_send(UNKNOWN_COMMAND);break;
+			default: i2c_send_byte(UNKNOWN_COMMAND, 0);break;
 		}
 		return 1;
 	}

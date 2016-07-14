@@ -171,7 +171,8 @@ void i2c_init();
 int i2c_read();
 int i2c_glimpse();
 int i2c_available();
-void i2c_send(unsigned char data);
+int i2c_send_byte(unsigned char data, int append);
+int i2c_send_word(unsigned short data, int append);
 
 void gpio_init();
 
