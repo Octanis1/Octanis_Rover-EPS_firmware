@@ -31,6 +31,28 @@ void eps_update_values()
 
 void eps_update_states()
 {
+	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD)
+	{
+		//Start buzzing
+		if(module_status[BUZZER] == MODULE_OFF)
+		{
+			module_set_state(BUZZER, 1);
+			module_status[BUZZER] = MODULE_ON;
+		}
+		else
+		{
+			module_set_state(BUZZER, 0);
+			module_status[BUZZER] = MODULE_OFF;
+		}
+	}
+	else
+	{
+		module_set_state(BUZZER, 0);
+		module_status[BUZZER] = MODULE_OFF;
+		module_set_state(M_M, 1);
+		module_status[M_M] = MODULE_ON;
+	}
+
 	int i;
 	for(i = 0; i < N_MODULES; i++)
 	{
@@ -94,28 +116,6 @@ void eps_update_states()
 				module_status[i] = MODULE_ON;
 			}
 		}
-	}
-
-	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD)
-	{
-		//Start buzzing
-		if(module_status[BUZZER] == MODULE_OFF)
-		{
-			module_set_state(BUZZER, 1);
-			module_status[BUZZER] = MODULE_ON;
-		}
-		else
-		{
-			module_set_state(BUZZER, 0);
-			module_status[BUZZER] = MODULE_OFF;
-		}
-	}
-	else
-	{
-		module_set_state(BUZZER, 0);
-		module_status[BUZZER] = MODULE_OFF;
-		module_set_state(M_M, 1);
-		module_status[M_M] = MODULE_ON;
 	}
 
 	if(eps_status.v_bat < THRESHOLD_0) //low bat voltage threshold
@@ -222,7 +222,7 @@ void eps_update_user_interface()
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
 
 	// battery good:
-	if(eps_status.v_bat > THRESHOLD_40)
+	if(eps_status.v_bat > BOOT_THRESHOLD)
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_2);
 	else if(eps_status.v_bat < THRESHOLD_40-THRESHOLD_LED_HYS)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_2);
@@ -234,12 +234,12 @@ void eps_update_user_interface()
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_3);
 
 	// RasPi on:
-	if(module_status[M_5_RPI] == MODULE_ON)
+	if((module_status[M_5_RPI] == MODULE_ON) || (module_status[M_5_RPI] == TURN_OFF))
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
 	else
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
 
-	// EPS on / battery > 0%:
+	// GPS on:
 	if(module_status[M_5_GPS] == MODULE_ON)
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_5);
 	else

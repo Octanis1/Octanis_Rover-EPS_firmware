@@ -316,14 +316,28 @@ void module_set_state(int module_number, char state)
 }
 
 int module_update_shutdown_signal(int module_number, char state){
+	static int power_off_counter = 0; //add some extra delay after the GPIO is low.
 
 	if(state == START_SHUTDOWN)
 	{
 		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
 		if((PORT_BOOT_STATE & PIN_BOOT_STATE) == 0)
-			return SHUTDOWN_COMPLETE;
+			power_off_counter++;
 		else
-			return START_SHUTDOWN;
+			power_off_counter = 0;
+
+		if(power_off_counter>20) //about 10 sec more delay
+		{
+			CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN); //buzzer off
+			return SHUTDOWN_COMPLETE;
+		}
+		else if(power_off_counter>16) //short buzzer sound
+			SET_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
+		else
+			CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN); //buzzer off
+
+
+		return START_SHUTDOWN;
 	}
 	else if(state == START_BOOT)
 	{

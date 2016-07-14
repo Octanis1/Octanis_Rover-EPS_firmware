@@ -138,13 +138,14 @@
 #define THRESHOLD_80		(uint16_t)(BAT_EMPTY+0.80*BAT_FS)	 	//80% of charge (100% is 4.1V & 636 adc counts)
 #define THRESHOLD_60		(uint16_t)(BAT_EMPTY+0.60*BAT_FS)		//60% of charge
 #define THRESHOLD_40		(uint16_t)(BAT_EMPTY+0.40*BAT_FS)		//40% of charge
+#define THRESHOLD_30		(uint16_t)(BAT_EMPTY+0.30*BAT_FS)		//20% of charge
 #define THRESHOLD_20		(uint16_t)(BAT_EMPTY+0.20*BAT_FS)		//20% of charge
 #define THRESHOLD_10		(uint16_t)(BAT_EMPTY+0.10*BAT_FS)		//10% of charge
 #define THRESHOLD_5		(uint16_t)(BAT_EMPTY+0.05*BAT_FS)		//5% of charge
 #define THRESHOLD_0		(uint16_t)(BAT_EMPTY)					//0% of charge
 
-#define BOOT_THRESHOLD		THRESHOLD_20 //minimum v_bat to start booting the raspi or olimex
-#define BUZZER_THRESHOLD		THRESHOLD_10
+#define BOOT_THRESHOLD		THRESHOLD_30 //minimum v_bat to start booting the raspi or olimex
+#define BUZZER_THRESHOLD		THRESHOLD_20
 #define ALL_OFF_THRESHOLD	THRESHOLD_5
 
 #define THRESHOLD_LED_HYS		(uint16_t)(BAT_FS*0.03)			//3% of hysteresis when turning on/off LEDs
