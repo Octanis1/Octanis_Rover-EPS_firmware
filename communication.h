@@ -9,8 +9,9 @@
 #define COMMUNICATION_H_
 
 //void i2c_callback(char *buffer);
-int i2c_respond_command(); // reacts to i2c commands, updating eps state
-int mainboard_poke_iterate(int *mainboard_poke_counter);
+int mainboard_poke_iterate();
+void mainboard_poke_reset_counter();
+int mainboard_poke_get_counter();
 
 //offer callback function
 //implement all the highlevel communication without care of low level protocol.
