@@ -416,3 +416,12 @@ int module_update_shutdown_signal(int module_number, char state){
 	else
 		return UNKNOWN_STATE;
 }
+
+int module_check_boot_state()
+{
+	if((PORT_BOOT_STATE & PIN_BOOT_STATE) == 0)
+		return SHUTDOWN_COMPLETE;
+	else
+		return SYSTEM_ON;
+
+}

@@ -191,6 +191,8 @@ void module_set_state(int module_number, char state);
 #define START_BOOT			3
 #define UNKNOWN_STATE		-1
 int module_update_shutdown_signal(int module_number, char state);
+int module_check_boot_state();
+
 
 //TODO s:
 //module interface

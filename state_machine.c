@@ -179,6 +179,18 @@ void eps_update_states()
 			module_status[H_T2] = MODULE_OFF;
 		}
 	}
+
+
+#ifdef FIRMWARE_BASE_STATION
+	// Workaround for ESD problem (if Raspi shuts down by accident)
+	if(module_status[M_5_RPI] == MODULE_ON && module_check_boot_state() == SHUTDOWN_COMPLETE)
+	{
+		module_set_state(M_5_RPI, 0);	// turn system off for reset; while GPS keeps running.
+		module_status[BUZZER] = TURN_ON; // set state such that it gets turned on in the next loop.
+	}
+#endif
+
+
 }
 
 
