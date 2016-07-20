@@ -91,10 +91,10 @@ int i2c_send_byte(unsigned char data, int append)
 int i2c_send_word(unsigned short data, int append)
 {
 	//Send MSB first, pass on append flag
-	if(i2c_send_byte((unsigned char)(data>>8), append))
+	if(i2c_send_byte((unsigned char)(data), append))
 	{
 		//If MSB sent successfully, append LSB
-		if(i2c_send_byte((unsigned char)data, 1))
+		if(i2c_send_byte((unsigned char)(data>>8), 1))
 		{
 			return 1;
 		}
@@ -114,12 +114,12 @@ void i2c_clear()
 void i2c_init()
 {
 	//TODO verify interrupts
-	UCB0CTL1 |= UCSWRST; // eUSCI_B in reset state
-	UCB0CTLW0 |= UCMODE_3; // I2C slave mode
-	UCB0I2COA0 = 0x0048; // own address is 48hex
-	UCB0CTL1 &= ~UCSWRST; // eUSCI_B in operational state
+	UCB0CTLW0 = UCSWRST; // eUSCI_B in reset state
+	UCB0CTLW0 |= UCMODE_3 | UCSYNC; // I2C slave mode, sync mode
+	UCB0I2COA0 = 0x48 | UCOAEN; // own address is 48hex
+	UCB0CTLW0 &= ~UCSWRST; // eUSCI_B in operational state
 
-	UCB0IE |= UCTXIE + UCRXIE; // enable TX&RX-interrupt
+	UCB0IE |= UCTXIE0 + UCRXIE0 + UCSTPIE; // enable TX&RX-interrupt
 }
 
 int i2c_read()
@@ -160,7 +160,11 @@ int i2c_available()
 #pragma vector = USCI_B0_VECTOR
 __interrupt void USCI_B0_ISR(void)
 {
-	if(UCB0IFG & UCTXIFG0) //TX
+	if(UCB0IFG & UCSTPIFG) //Reset after stop condition,TODO: not sure if required
+	{
+		UCB0IFG &= ~UCSTPIFG;
+	}
+	else if(UCB0IFG & UCTXIFG0) //TX
 	{
 		//hold byte to send in temp
 		char temp = TXData[TXData_ptr_start];
@@ -178,7 +182,7 @@ __interrupt void USCI_B0_ISR(void)
 		{
 			UCB0TXBUF = 0x00;
 		}
-	} else //RX
+	} else if(UCB0IFG & UCRXIFG0) //RX
 	{
 
 		//get end of buffer and postincrement length
@@ -196,6 +200,7 @@ __interrupt void USCI_B0_ISR(void)
 				RXData_ptr_start = RXData_ptr_start - I2C_BUFFER_SIZE;
 		}
 
+		i2c_receive_callback();
 	}
 }
 

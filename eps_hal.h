@@ -105,7 +105,7 @@
 #define PORT_BOOT_STATE		PORT_ANALOG_IN
 #define PIN_BOOT_STATE		PIN_A10
 
-#define TIMER0_A0_DELAY		0x2000
+#define TIMER0_A0_DELAY		0x4000
 #define TIMER0_A1_ENABLE		1
 #define TIMER0_A1_DELAY		0x0660 //ca. 100ms
 
@@ -184,6 +184,7 @@ int i2c_glimpse();
 int i2c_available();
 int i2c_send_byte(unsigned char data, int append);
 int i2c_send_word(unsigned short data, int append);
+void i2c_receive_callback(); //has to be implemented, is called by interrupt
 
 void gpio_init();
 

@@ -171,10 +171,6 @@ int main(void)
 		mainboard_poke_iterate(&mainboard_poke_counter); //revive mainboard
 		ADC_update(); //get ADC values
 		eps_update_values();
-		if(i2c_respond_command()) //respond to received messages and reset poke counter as MB still alive
-		{
-			mainboard_poke_counter = 0;
-		}
 		eps_update_states(); //update eps state according to received commands and measured analog values; if necessary, trigger interrupt for powered modules before shutting them down.
 		eps_update_user_interface(); //all the status leds and buttons
 		__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts

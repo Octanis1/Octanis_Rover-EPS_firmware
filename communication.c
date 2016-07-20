@@ -11,16 +11,18 @@
 #include "eps_hal.h"
 #include "state_machine.h"
 
-int mainboard_poke_iterate(int *mainboard_poke_counter)
+volatile int mainboard_poke_counter = 0;
+
+int mainboard_poke_iterate()
 {
 	int i;
-	if(++(*mainboard_poke_counter) == POKE_COUNTER_LIMIT)
+	if(++mainboard_poke_counter == POKE_COUNTER_LIMIT)
 	{
 		//poke mainboard
-		CLR_PIN(PORT_MB_POKE, PIN_MB_POKE);
+		SET_PIN(PORT_MB_POKE, PIN_MB_POKE);
 		return 1;
 	}
-	if(++(*mainboard_poke_counter) == 2 * POKE_COUNTER_LIMIT)
+	if(mainboard_poke_counter == 2 * POKE_COUNTER_LIMIT)
 	{
 		//mainboard did not react to poke, cut power and delay for 5 timer ticks
 		//cut mainboard power
@@ -32,104 +34,115 @@ int mainboard_poke_iterate(int *mainboard_poke_counter)
 			__no_operation();                       // Set breakpoint >>here<< and read
 		}
 		//reset poke pin
-		SET_PIN(PORT_MB_POKE, PIN_MB_POKE);
+		CLR_PIN(PORT_MB_POKE, PIN_MB_POKE);
 		//power up mainboard
 		module_set_state(M_M, ON);
 		//reset counter
-		*mainboard_poke_counter = 0;
+		mainboard_poke_counter = 0;
 		return -1;
 	}
 	return 0;
 }
 
-int i2c_respond_command() // sets the response.
+int mainboard_poke_get_counter()
 {
-	if(i2c_available())
+	return mainboard_poke_counter;
+}
+
+void mainboard_poke_reset_counter()
+{
+	//reset counter
+	mainboard_poke_counter = 0;
+	//reset poke pin if already activated
+	CLR_PIN(PORT_MB_POKE, PIN_MB_POKE);
+}
+
+void i2c_receive_callback()
+{
+	switch(i2c_read())
 	{
-		switch(i2c_read())
-		{
-			//poke response
-			case ALIVE:
+		//poke response
+		case ALIVE:
+			i2c_send_byte(COMM_OK, 0);
+			break;
+		//turn off module
+		case M3V3_1_OFF:
+			i2c_send_byte(COMM_OK, 0);
+			module_status[M_331] = TURN_OFF;
+			break;
+		case M3V3_2_OFF:
+			i2c_send_byte(COMM_OK, 0);
+			module_status[M_332] = TURN_OFF;
+			break;
+		case M5V_OFF:
+			i2c_send_byte(COMM_OK, 0);
+			module_status[M_5] = TURN_OFF;
+			break;
+		case M11V_OFF:
+			i2c_send_byte(COMM_OK, 0);
+			module_status[M_11] = TURN_OFF;
+			break;
+		// turn on module
+		case M3V3_1_ON:
+			if (eps_status.v_bat > THRESHOLD_10)
+			{
 				i2c_send_byte(COMM_OK, 0);
-				break;
-			//turn off module
-			case M3V3_1_OFF:
+				module_status[M_331] = TURN_ON;
+			}
+			else
+			{
+				i2c_send_byte(LOW_VOLTAGE, 0);
+			}
+			break;
+		case M3V3_2_ON:
+			if (eps_status.v_bat > THRESHOLD_10)
+			{
 				i2c_send_byte(COMM_OK, 0);
-				module_status[M_331] = TURN_OFF;
-				break;
-			case M3V3_2_OFF:
+				module_status[M_332] = TURN_ON;
+			}
+			else
+			{
+				i2c_send_byte(LOW_VOLTAGE, 0);
+			}
+			break;
+		case M5V_ON:
+			if (eps_status.v_bat > THRESHOLD_10)
+			{
 				i2c_send_byte(COMM_OK, 0);
-				module_status[M_332] = TURN_OFF;
-				break;
-			case M5V_OFF:
+				module_status[M_5] = TURN_ON;
+			}
+			else
+			{
+				i2c_send_byte(LOW_VOLTAGE, 0);
+			}
+			break;
+		case M11V_ON:
+			if (eps_status.v_bat > THRESHOLD_10)
+			{
 				i2c_send_byte(COMM_OK, 0);
-				module_status[M_5] = TURN_OFF;
-				break;
-			case M11V_OFF:
-				i2c_send_byte(COMM_OK, 0);
-				module_status[M_11] = TURN_OFF;
-				break;
-			// turn on module
-			case M3V3_1_ON:
-				if (eps_status.v_bat > THRESHOLD_10)
-				{
-					i2c_send_byte(COMM_OK, 0);
-					module_status[M_331] = TURN_ON;
-				}
-				else
-				{
-					i2c_send_byte(LOW_VOLTAGE, 0);
-				}
-				break;
-			case M3V3_2_ON:
-				if (eps_status.v_bat > THRESHOLD_10)
-				{
-					i2c_send_byte(COMM_OK, 0);
-					module_status[M_332] = TURN_ON;
-				}
-				else
-				{
-					i2c_send_byte(LOW_VOLTAGE, 0);
-				}
-				break;
-			case M5V_ON:
-				if (eps_status.v_bat > THRESHOLD_10)
-				{
-					i2c_send_byte(COMM_OK, 0);
-					module_status[M_5] = TURN_ON;
-				}
-				else
-				{
-					i2c_send_byte(LOW_VOLTAGE, 0);
-				}
-				break;
-			case M11V_ON:
-				if (eps_status.v_bat > THRESHOLD_10)
-				{
-					i2c_send_byte(COMM_OK, 0);
-					module_status[M_11] = TURN_ON;
-				}
-				else
-				{
-					i2c_send_byte(LOW_VOLTAGE, 0);
-				}
-				break;
-			//return analog values
-			case V_BAT:
-				i2c_send_word(eps_status.v_bat, 0);
-				break;
-			case V_SC:
-				i2c_send_word(eps_status.v_solar, 0);
-				break;
-			case I_IN:
-				i2c_send_word(eps_status.current_in, 0);
-				break;
-			case I_OUT:
-				i2c_send_word(eps_status.current_out, 0);
-				break;
-			case AEXT1:
-				i2c_send_word(eps_status.analog_ext1, 0);
-				break;
+				module_status[M_11] = TURN_ON;
+			}
+			else
+			{
+				i2c_send_byte(LOW_VOLTAGE, 0);
+			}
+			break;
+		//return analog values
+		case V_BAT:
+			i2c_send_word(eps_status.v_bat, 0);
+			break;
+		case V_SC:
+			i2c_send_word(eps_status.v_solar, 0);
+			break;
+		case I_IN:
+			i2c_send_word(eps_status.current_in, 0);
+			break;
+		case I_OUT:
+			i2c_send_word(eps_status.current_out, 0);
+			break;
+		case AEXT1:
+			i2c_send_word(eps_status.analog_ext1, 0);
+			break;
 //			case AEXT2:
 //				i2c_send_word(eps_status.analog_ext2, 0);
 //				break;
@@ -139,25 +152,11 @@ int i2c_respond_command() // sets the response.
 //			case AEXT4:
 //				i2c_send_word(eps_status.analog_ext4, 0);
 //				break;
-			case T_BAT:
-				i2c_send_word(eps_status.t_bat, 0);
-				break;
-			//default response to unknown commands
-			default: i2c_send_byte(UNKNOWN_COMMAND, 0);break;
-		}
-		return 1;
+		case T_BAT:
+			i2c_send_word(eps_status.t_bat, 0);
+			break;
+		//default response to unknown commands
+		default: i2c_send_byte(UNKNOWN_COMMAND, 0);break;
 	}
-	else
-	{
-		return 0;
-	}
-}
-
-void execute_i2c_command(unsigned char command)
-{
-		switch(command)
-		{
-			default: break;
-		}
-
+	mainboard_poke_reset_counter();
 }
