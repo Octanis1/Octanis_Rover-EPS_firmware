@@ -31,26 +31,25 @@ void eps_update_values()
 
 void eps_update_states()
 {
+	static char buzzer_state = 0;
 	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD)
 	{
 		//Start buzzing
-		if(module_status[BUZZER] == MODULE_OFF)
+		if(buzzer_state == 0)
 		{
 			module_set_state(BUZZER, 1);
-			module_status[BUZZER] = MODULE_ON;
+			buzzer_state = 1;
 		}
 		else
 		{
 			module_set_state(BUZZER, 0);
-			module_status[BUZZER] = MODULE_OFF;
+			buzzer_state = 0;
 		}
 	}
 	else
 	{
 		module_set_state(BUZZER, 0);
-		module_status[BUZZER] = MODULE_OFF;
-		module_set_state(M_M, 1);
-		module_status[M_M] = MODULE_ON;
+		buzzer_state = 0;
 	}
 
 	int i;
@@ -66,6 +65,9 @@ void eps_update_states()
 				{
 					module_set_state(M_5_RPI, 0);
 					module_status[M_5_RPI] = MODULE_OFF;
+					module_set_state(BUZZER, 1); //confirmation
+					timer_delay100(8);
+					module_set_state(BUZZER, 0);
 				}
 			}
 #else
@@ -96,6 +98,9 @@ void eps_update_states()
 				if(module_update_shutdown_signal(M_5_RPI, START_BOOT) == SYSTEM_ON)
 				{
 					module_status[M_5_RPI] = MODULE_ON;
+					module_set_state(BUZZER, 1); //confirmation
+					timer_delay100(3);
+					module_set_state(BUZZER, 0);
 				}
 			}
 #else
@@ -178,6 +183,13 @@ void eps_update_states()
 			module_set_state(H_T2, 0);
 			module_status[H_T2] = MODULE_OFF;
 		}
+	}
+
+	// TURN ON mainboard if battery is again sufficiently charged:
+	if(module_status[M_M] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD)
+	{
+		module_set_state(M_M, 0);
+		module_status[M_M] = TURN_ON;
 	}
 
 

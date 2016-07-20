@@ -38,13 +38,13 @@ void gpio_init()
 	P2SEL0 = 0x00; //standard gpio
 	P2SEL1 = 0x00;
 
-	P3OUT = 0x04; //module pins p3.0-4 output, rest pulldown. everything off, main is active low
+	P3OUT = 0x04; // module pins p3.0-6 output, 3.7 pulldown, everything off (main is active low), SOLAR ON (active low)
 	P3REN = 0xe0;
-	P3DIR = 0x1f;
+	P3DIR = 0x7f;
 	P3SEL0 = 0x00; //standard gpio
 	P3SEL1 = 0x00;
 
-	P4OUT = 0x00; // module pin p4.7, A8-A11 used as digital GPIOs p4.0-3 (of which p4.3 is shutdown pin, p4.0 MB poke), rest pulldown
+	P4OUT = 0x00; // module pin p4.7, A8-A11 used as digital GPIOs p4.0-3 (of which p4.2 is boot_state pin, p4.3 is shutdown pin, p4.0 MB poke), rest pulldown
 	P4REN = 0xff; // all pulldowns
 	P4DIR = 0x89; // module pin 4.7, shutdown pin 4.3, mainboard poke 4.0
 	P4SEL0 = 0x00; // standard gpio
@@ -205,16 +205,32 @@ void timer0_A_init()
 {
 	TA0R = 0x0000;                       // Reset timer counter
 	TA0CCR0 = TIMER0_A0_DELAY;           // Set timing offset of A0
-	TA0CCR1 = TIMER0_A0_DELAY + TIMER0_A1_DELAY / 2;                    // Set timing offset of A1
+	TA0CCR1 = TIMER0_A1_DELAY;           // Set timing offset of A1
 	TA0CCTL0 = CCIE;                     // TA0CCR0 interrupt enabled
-
-#if TIMER0_A1_ENABLE
-	TA0CCTL1 = CCIE;                     // TA0CCR1 interrupt enabled
-#endif
 
 	TA0EX0 = TAIDEX_7;					 // Prescaler: divide by 8
 	TA0CTL = TASSEL_2 + MC_2 + ID_3;     // activate timer, SMCLK, contmode, prescaler 1:8
 }
+
+//multiple of 100ms delay
+void timer_delay100(int t100)
+{
+#if TIMER0_A1_ENABLE
+	TA0CCR1 = TA0R + TIMER0_A1_DELAY;
+	TA0CCTL1 = CCIE;                     // TA0CCR1 interrupt enabled
+#endif
+	for(; t100>0; t100 = t100-1)
+	{
+		TA0CCR0 += TIMER0_A1_DELAY; //also delay the other timer such that it doesnt wake up before!
+		__bis_SR_register(CPUOFF + GIE);        // wait for timer interrupt
+		__no_operation();                       // Set breakpoint >>here<< and read
+
+	}
+#if TIMER0_A1_ENABLE
+	TA0CCTL1 &= ~CCIE;                     // TA0CCR1 interrupt disabled
+#endif
+}
+
 
 // Timer0 A interrupt service routine CC0
 // Wake up processor to spin main loop once
@@ -230,8 +246,9 @@ __interrupt void Timer0_A0 ()
 #pragma vector=TIMER0_A1_VECTOR
 __interrupt void Timer0_A1 ()
 {
-	//TODO find use for this timer
 	TA0CCR1 += TIMER0_A1_DELAY;
+	TA0CCTL1 &= ~CCIFG;
+	__bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -342,7 +359,7 @@ void module_set_state(int module_number, char state)
 {
 	switch(module_number)
 	{
-		case M_M:
+		case M_M: //ACTIVE LOW
 			if(state) CLR_PIN(PORT_3V3_M_EN, PIN_3V3_M_EN);
 			else SET_PIN(PORT_3V3_M_EN, PIN_3V3_M_EN);
 			break;
@@ -358,13 +375,21 @@ void module_set_state(int module_number, char state)
 			if(state) SET_PIN(PORT_5V_EN, PIN_5V_EN);
 			else CLR_PIN(PORT_5V_EN, PIN_5V_EN);
 			break;
+		case M_52:
+			if(state) SET_PIN(PORT_5V2_EN, PIN_5V2_EN);
+			else CLR_PIN(PORT_5V2_EN, PIN_5V2_EN);
+			break;
 		case M_11:
 			if(state) SET_PIN(PORT_11V_EN, PIN_11V_EN);
 			else CLR_PIN(PORT_11V_EN, PIN_11V_EN);
 			break;
-		case M_SC:
-			if(state) SET_PIN(PORT_SC_EN, PIN_SC_EN);
-			else CLR_PIN(PORT_SC_EN, PIN_SC_EN);
+		case M_DIRECT:
+			if(state) SET_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
+			else CLR_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
+			break;
+		case M_SC: //ACTIVE LOW
+			if(state) CLR_PIN(PORT_SC_EN, PIN_SC_EN);
+			else SET_PIN(PORT_SC_EN, PIN_SC_EN);
 			break;
 		case BUZZER:
 			if(state) SET_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);

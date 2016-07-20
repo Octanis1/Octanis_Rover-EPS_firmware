@@ -8,7 +8,7 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
-#define FIRMWARE_BASE_STATION 	1
+//#define FIRMWARE_BASE_STATION 	1
 
 #include <msp430fr5969.h>
 
@@ -17,42 +17,50 @@
 
 #define I2C_BUFFER_SIZE		8
 
-#define N_MODULES	9
+#define N_MODULES	11
 //indexes:
-#define M_M			0
-#define M_SC			1
+#define M_M			0 	//active low
+#define M_SC			1	//active low
 #define M_331		2
 #define M_332		3
 #define M_5			4
-#define M_11			5
+#define M_52			5
+#define M_11			6
 #ifdef FIRMWARE_BASE_STATION
 	#define M_5_GPS			M_5
 	#define M_5_RPI			M_11
 #else
 	#define M_5_OLIMEX		M_5
 #endif
-#define BUZZER		6
-#define H_T2			7
-#define 	H_T3			8
+#define M_DIRECT		7
+#define BUZZER		8
+#define H_T2			9
+#define 	H_T3			10
 
 #define ON		1
 // turning a module off is always allowed
 #define OFF		0
 
 #define PORT_3V3_M_EN		P3OUT
-#define PIN_3V3_M_EN		BIT2
+#define PIN_3V3_M_EN			BIT2
 
 #define PORT_3V3_1_EN		P3OUT
-#define PIN_3V3_1_EN		BIT3
+#define PIN_3V3_1_EN			BIT3
 
 #define PORT_3V3_2_EN		P4OUT
-#define PIN_3V3_2_EN		BIT7
+#define PIN_3V3_2_EN			BIT7
 
 #define PORT_5V_EN			P3OUT
 #define PIN_5V_EN			BIT1
 
+#define PORT_5V2_EN			P3OUT
+#define PIN_5V2_EN			BIT6
+
 #define PORT_11V_EN			P3OUT
 #define PIN_11V_EN			BIT0
+
+#define PORT_DIRECT_EN		P3OUT
+#define PIN_DIRECT_EN		BIT5
 
 #define PORT_SC_EN			P3OUT
 #define PIN_SC_EN			BIT4
@@ -98,8 +106,8 @@
 #define PIN_BOOT_STATE		PIN_A10
 
 #define TIMER0_A0_DELAY		0x2000
-#define TIMER0_A1_ENABLE	0
-#define TIMER0_A1_DELAY		0x2000
+#define TIMER0_A1_ENABLE		1
+#define TIMER0_A1_DELAY		0x0660 //ca. 100ms
 
 #define POKE_COUNTER_LIMIT	5
 
@@ -140,12 +148,14 @@
 #define THRESHOLD_40		(uint16_t)(BAT_EMPTY+0.40*BAT_FS)		//40% of charge
 #define THRESHOLD_30		(uint16_t)(BAT_EMPTY+0.30*BAT_FS)		//20% of charge
 #define THRESHOLD_20		(uint16_t)(BAT_EMPTY+0.20*BAT_FS)		//20% of charge
+#define THRESHOLD_15		(uint16_t)(BAT_EMPTY+0.15*BAT_FS)		//15% of charge
 #define THRESHOLD_10		(uint16_t)(BAT_EMPTY+0.10*BAT_FS)		//10% of charge
 #define THRESHOLD_5		(uint16_t)(BAT_EMPTY+0.05*BAT_FS)		//5% of charge
 #define THRESHOLD_0		(uint16_t)(BAT_EMPTY)					//0% of charge
 
-#define BOOT_THRESHOLD		THRESHOLD_30 //minimum v_bat to start booting the raspi or olimex
-#define BUZZER_THRESHOLD		THRESHOLD_20
+#define BOOT_THRESHOLD		THRESHOLD_20 //minimum v_bat to start booting the raspi or olimex
+#define BUZZER_THRESHOLD		THRESHOLD_15
+#define MAINBOARD_THRESHOLD	THRESHOLD_10
 #define ALL_OFF_THRESHOLD	THRESHOLD_5
 
 #define THRESHOLD_LED_HYS		(uint16_t)(BAT_FS*0.03)			//3% of hysteresis when turning on/off LEDs
@@ -178,6 +188,7 @@ int i2c_send_word(unsigned short data, int append);
 void gpio_init();
 
 void timer0_A_init();
+void timer_delay100(int t10);
 
 void ADC_init();
 void ADC_update();
