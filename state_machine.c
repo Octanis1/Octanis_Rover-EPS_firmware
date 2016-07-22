@@ -7,13 +7,15 @@ module_status_t module_status[N_MODULES]; //stores the answers to be sent to an 
 
 void eps_update_values()
 {
+	float A0 = (int16_t)(ADC_read(AIN_A_EXT0_ADDR));
 	//TODO: Conversion
+	eps_status.analog_ext1 = ADC_read(AIN_A_EXT1_ADDR);
 	eps_status.v_bat = (uint16_t)(ADC_read(AIN_V_BAT_ADDR) * 5000.0f / 4096.0f);
-	eps_status.t_bat = (int16_t)((ADC_read(AIN_A_EXT0_ADDR) - 672.0f) * 5000.0f / 635.0f);
+	eps_status.t_bat = (uint16_t)(A0 * 9100.0f / (2.0f*eps_status.analog_ext1 - A0));
 	eps_status.v_solar = (uint16_t)(ADC_read(AIN_V_SC_ADDR) * 8250.0f / 4096.0f);
 	eps_status.current_in = (uint16_t)(ADC_read(AIN_I_IN_ADDR) * 5000.0f / 4096.0f);
 	eps_status.current_out = (uint16_t)(ADC_read(AIN_I_OUT_ADDR) * 5000.0f / 4096.0f);
-	eps_status.analog_ext1 = ADC_read(AIN_A_EXT1_ADDR);
+
 //	eps_status.analog_ext2 = ADC_read(AIN_A_EXT2_ADDR);
 //	eps_status.analog_ext3 = ADC_read(AIN_A_EXT3_ADDR);
 //	eps_status.analog_ext4 = ADC_read(AIN_A_EXT4_ADDR);
