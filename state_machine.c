@@ -68,7 +68,7 @@ void eps_update_states()
 					module_set_state(M_5_RPI, 0);
 					module_status[M_5_RPI] = MODULE_OFF;
 					module_set_state(BUZZER, 1); //confirmation
-					timer_delay100(8);
+					timer_delay100(6);
 					module_set_state(BUZZER, 0);
 				}
 			}
@@ -93,7 +93,7 @@ void eps_update_states()
 		else if(module_status[i] == TURN_ON)
 		{
 #ifdef FIRMWARE_BASE_STATION
-			// wait for shutdown and turn off module
+			// wait till boot complete before changing internal state
 			if(i==M_5_RPI)
 			{
 				module_set_state(M_5_RPI, 1);
@@ -106,7 +106,7 @@ void eps_update_states()
 				}
 			}
 #else
-			// wait for shutdown and turn off module
+			// wait till boot complete before changing internal state
 			if(i==M_5_OLIMEX)
 			{
 				module_set_state(M_5_OLIMEX, 1);
@@ -197,52 +197,110 @@ void eps_update_states()
 
 #ifdef FIRMWARE_BASE_STATION
 	// Workaround for ESD problem (if Raspi shuts down by accident)
+	static int rpi_off_timeout = 0;
+
 	if(module_status[M_5_RPI] == MODULE_ON && module_check_boot_state() == SHUTDOWN_COMPLETE)
 	{
-		module_set_state(M_5_RPI, 0);	// turn system off for reset; while GPS keeps running.
-		module_status[BUZZER] = TURN_ON; // set state such that it gets turned on in the next loop.
+		rpi_off_timeout++;
+		if(rpi_off_timeout > 40) // wait at least 20 s in case rpi is already rebooting...
+		{
+			module_set_state(M_5_RPI, 0);	// turn system off for reset; while GPS keeps running.
+			module_status[M_5_RPI] = TURN_ON; // set state such that it gets turned on in the next loop.
+			rpi_off_timeout = 0;
+		}
 	}
+	else
+		rpi_off_timeout = 0;
 #endif
 
 
 }
 
 
+
+#define SHORT_BUTTON_TIME 	2
+#define LONG_BUTTON_TIME		6
 void eps_update_user_interface()
 {
 #ifdef FIRMWARE_BASE_STATION
+	////////////////////////////  check button: //////////////////////////////////
 
-	//check button:
+	static int i;
 	static uint8_t time_button_pressed = 0;
 	if(PORT_DIGITAL_IN & PIN_DIGITAL_6)
-		time_button_pressed = 0;
-	else
-		time_button_pressed += 1;
+	{//only check how long button was pressed if released for the first threshold
 
-	if(time_button_pressed > 5) //at least 3 seconds
-	{
-		//always assume GPS and RPI have the same state! GPS waits for RPI to turn on/off completely untill it can change state again.
-		if(module_status[M_5_RPI] == MODULE_ON)
-		{
-			module_status[M_5_RPI] = TURN_OFF;
-			module_status[M_5_GPS] = TURN_OFF;
-		}
-		else if(module_status[M_5_RPI] == MODULE_OFF)
-		{
-			if(eps_status.v_bat > BOOT_THRESHOLD)
+		if(time_button_pressed > LONG_BUTTON_TIME)
+		{ // short button pressing; only turn off or on raspi. If GPS would have been off, it would also turn on.
+			if(module_status[M_5_RPI] == MODULE_ON)
 			{
-				module_status[M_5_RPI] = TURN_ON;
-				module_status[M_5_GPS] = TURN_ON;
+				//long button pressing: turn off all systems to be able to charge battery.
+				module_status[M_5_RPI] = TURN_OFF;
+				module_status[M_5_GPS] = TURN_OFF;
+			}
+			else if(module_status[M_5_RPI] == MODULE_OFF)
+			{
+				module_status[M_5_GPS] = TURN_OFF;
+			}
+		}
+		else if(time_button_pressed > SHORT_BUTTON_TIME) //at least 2 seconds
+		{
+			// short button pressing; only turn off or on raspi. If GPS would have been off, it would also turn on.
+			if(module_status[M_5_RPI] == MODULE_ON)
+			{
+				module_status[M_5_RPI] = TURN_OFF;
+			}
+			else if(module_status[M_5_RPI] == MODULE_OFF)
+			{
+				if(eps_status.v_bat > BOOT_THRESHOLD)
+				{
+					module_status[M_5_RPI] = TURN_ON;
+					module_status[M_5_GPS] = TURN_ON;
+				}
 			}
 		}
 
-		time_button_pressed = 0;
+		time_button_pressed = 0; //reset counter because button is released.
 	}
+	else
+	{
+		//directly give error sound if button action not allowed:
+		if(module_status[M_5_RPI] == TURN_ON || module_status[M_5_RPI] == TURN_OFF)
+		{
+			for(i=3;i>0;i--) //error tone: 3 very short beeps.
+			{
+				module_set_state(BUZZER, 1);
+				timer_delay50(1);
+				module_set_state(BUZZER, 0);
+				timer_delay50(1);
+			}
+		}
+		else
+		{
+			if(time_button_pressed == SHORT_BUTTON_TIME) //at least 1.5 seconds
+			{
+				module_set_state(BUZZER, 1); //confirmation
+				timer_delay100(1);
+				module_set_state(BUZZER, 0);
+			}
+			else if(time_button_pressed == LONG_BUTTON_TIME)
+			{
+				module_set_state(BUZZER, 1); //confirmation
+				timer_delay100(1);
+				module_set_state(BUZZER, 0);
+				timer_delay100(1);
+				module_set_state(BUZZER, 1);
+				timer_delay100(1);
+				module_set_state(BUZZER, 0);
+				timer_delay100(1);
+			}
 
-
+			time_button_pressed += 1;
+		}
+	}
 	// LEDs:
 	// battery full:
-	if(eps_status.v_bat > THRESHOLD_95)
+	if(eps_status.v_bat > THRESHOLD_95 && (eps_status.current_in-eps_status.current_out) < 100)
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
 	else if(eps_status.v_bat < THRESHOLD_95-THRESHOLD_LED_HYS)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
@@ -266,7 +324,7 @@ void eps_update_user_interface()
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
 
 	// GPS on:
-	if(module_status[M_5_GPS] == MODULE_ON)
+	if(module_status[M_5_GPS] == MODULE_ON || module_status[M_5_GPS] == TURN_ON)
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_5);
 	else
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_5);

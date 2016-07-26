@@ -38,15 +38,17 @@ void gpio_init()
 	P2SEL0 = 0x00; //standard gpio
 	P2SEL1 = 0x00;
 
-	P3OUT = 0x04; // module pins p3.0-6 output, 3.7 pulldown, everything off (main is active low), SOLAR ON (active low)
+	P3OUT = PIN_DIRECT_EN + PIN_3V3_M_EN; // module pins p3.0-6 output, 3.7 pulldown, everything off (main & direct are active low), SOLAR ON (active low)
 	P3REN = 0xe0;
 	P3DIR = 0x7f;
 	P3SEL0 = 0x00; //standard gpio
 	P3SEL1 = 0x00;
 
-	P4OUT = 0x00; // module pin p4.7, A8-A11 used as digital GPIOs p4.0-3 (of which p4.2 is boot_state pin, p4.3 is shutdown pin, p4.0 MB poke), rest pulldown
-	P4REN = 0xff; // all pulldowns
-	P4DIR = 0x89; // module pin 4.7, shutdown pin 4.3, mainboard poke 4.0
+	P4OUT = PIN_MB_RESET_N; // module pin p4.7, A8-A11 used as digital GPIOs p4.0-3 (of which p4.2 (A10) is boot_state pin,
+																// p4.3 (A11) is shutdown pin, p4.0 (A8) is MB interrupt,
+																// p4.1 (A9) is MB reset), rest pulldown
+	P4REN = 0xff; // all pulldowns, except MB reset is pull-up
+	P4DIR = BIT7 + PIN_SHUTDOWN + PIN_MB_INT; // module pin 4.7, shutdown pin 4.3, mainboard poke 4.0, mainboard reset 4.1: by default high-Z with pull-up
 	P4SEL0 = 0x00; // standard gpio
 	P4SEL1 = 0x00;
 
@@ -236,6 +238,25 @@ void timer_delay100(int t100)
 #endif
 }
 
+//multiple of 100ms delay
+void timer_delay50(int t50)
+{
+#if TIMER0_A1_ENABLE
+	TA0CCR1 = TA0R + TIMER0_A1_DELAY/2;
+	TA0CCTL1 = CCIE;                     // TA0CCR1 interrupt enabled
+#endif
+	for(; t50>0; t50 = t50-1)
+	{
+		TA0CCR0 += TIMER0_A1_DELAY/2; //also delay the other timer such that it doesnt wake up before!
+		__bis_SR_register(CPUOFF + GIE);        // wait for timer interrupt
+		__no_operation();                       // Set breakpoint >>here<< and read
+
+	}
+#if TIMER0_A1_ENABLE
+	TA0CCTL1 &= ~CCIE;                     // TA0CCR1 interrupt disabled
+#endif
+}
+
 
 // Timer0 A interrupt service routine CC0
 // Wake up processor to spin main loop once
@@ -388,9 +409,9 @@ void module_set_state(int module_number, char state)
 			if(state) SET_PIN(PORT_11V_EN, PIN_11V_EN);
 			else CLR_PIN(PORT_11V_EN, PIN_11V_EN);
 			break;
-		case M_DIRECT:
-			if(state) SET_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
-			else CLR_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
+		case M_DIRECT: //ACTIVE LOW
+			if(state) CLR_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
+			else SET_PIN(PORT_DIRECT_EN, PIN_DIRECT_EN);
 			break;
 		case M_SC: //ACTIVE LOW
 			if(state) CLR_PIN(PORT_SC_EN, PIN_SC_EN);
@@ -413,7 +434,7 @@ void module_set_state(int module_number, char state)
 
 int module_update_shutdown_signal(int module_number, char state){
 	static int power_off_counter = 0; //add some extra delay after the GPIO is low.
-
+	static int force_power_off_counter = 0;
 	if(state == START_SHUTDOWN)
 	{
 		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
@@ -422,16 +443,14 @@ int module_update_shutdown_signal(int module_number, char state){
 		else
 			power_off_counter = 0;
 
-		if(power_off_counter>20) //about 10 sec more delay
+		force_power_off_counter++;
+
+		if(power_off_counter>10 || force_power_off_counter > 600) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
 		{
-			CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN); //buzzer off
+			force_power_off_counter = 0;
+			power_off_counter = 0;
 			return SHUTDOWN_COMPLETE;
 		}
-		else if(power_off_counter>16) //short buzzer sound
-			SET_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
-		else
-			CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN); //buzzer off
-
 
 		return START_SHUTDOWN;
 	}
@@ -455,3 +474,23 @@ int module_check_boot_state()
 		return SYSTEM_ON;
 
 }
+
+void mainboard_reset()
+{
+	int i;
+
+	// set reset pin as low output:
+	CLR_PIN(PORT_MB_OUT, PIN_MB_RESET_N);
+	SET_PIN(DIR_MB, PIN_MB_RESET_N);
+
+	for(i = 100; i > 0; i--);
+//	{
+//		__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts
+//		__no_operation();                       // Set breakpoint >>here<< and read
+//	}
+
+	// set reset pin high-Z with pull-up:
+	SET_PIN(PORT_MB_OUT, PIN_MB_RESET_N);
+	CLR_PIN(DIR_MB, PIN_MB_RESET_N);
+}
+

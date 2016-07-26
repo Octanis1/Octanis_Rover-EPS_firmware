@@ -8,7 +8,7 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
-//#define FIRMWARE_BASE_STATION 	1
+#define FIRMWARE_BASE_STATION 	1
 
 #include <msp430fr5969.h>
 
@@ -74,12 +74,6 @@
 #define PORT_HEATER_3_EN	PJOUT
 #define PIN_HEATER_3_EN		BIT2
 
-#define MASTER_POKE_PORT	P3OUT
-//on Analog EXT4
-#define MASTER_POKE_PIN		BIT7
-//on Analog EXT3
-#define MASTER_POKE_PIN2		BIT6
-
 #define PORT_DIGITAL_OUT		P2OUT
 #define PORT_DIGITAL_IN		P2IN
 #define PIN_DIGITAL_1		BIT5		// LED battery full (95% or more)
@@ -91,14 +85,17 @@
 
 //ANALOG PORTS USED AS DIGITAL GPIOs
 #define PORT_ANALOG_OUT		P4OUT
+#define PORT_ANALOG_DIR		P4DIR
 #define PORT_ANALOG_IN		P4IN
 #define PIN_A11				BIT3
 #define PIN_A10				BIT2
 #define PIN_A9				BIT1
 #define PIN_A8				BIT0
 
-#define PORT_MB_POKE			PORT_ANALOG_OUT
-#define PIN_MB_POKE			PIN_A8
+#define PORT_MB_OUT			PORT_ANALOG_OUT
+#define DIR_MB				PORT_ANALOG_DIR
+#define PIN_MB_INT			PIN_A8
+#define PIN_MB_RESET_N		PIN_A9
 
 #define PORT_SHUTDOWN		PORT_ANALOG_OUT
 #define PIN_SHUTDOWN			PIN_A11
@@ -190,6 +187,8 @@ void gpio_init();
 
 void timer0_A_init();
 void timer_delay100(int t10);
+void timer_delay50(int t50);
+
 
 void ADC_init();
 void ADC_update();
@@ -202,9 +201,11 @@ void module_set_state(int module_number, char state);
 #define START_SHUTDOWN		2
 #define START_BOOT			3
 #define UNKNOWN_STATE		-1
+
 int module_update_shutdown_signal(int module_number, char state);
 int module_check_boot_state();
 
+void mainboard_reset();
 
 //TODO s:
 //module interface

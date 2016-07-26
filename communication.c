@@ -15,28 +15,17 @@ volatile int mainboard_poke_counter = 0;
 
 int mainboard_poke_iterate()
 {
-	int i;
 	if(++mainboard_poke_counter == POKE_COUNTER_LIMIT)
 	{
-		//poke mainboard
-		SET_PIN(PORT_MB_POKE, PIN_MB_POKE);
+//		//poke mainboard --> not needed anymore
+//		SET_PIN(PORT_MB_POKE, PIN_MB_POKE);
 		return 1;
 	}
 	if(mainboard_poke_counter == 2 * POKE_COUNTER_LIMIT)
 	{
-		//mainboard did not react to poke, cut power and delay for 5 timer ticks
-		//cut mainboard power
-		module_set_state(M_M, OFF);
+		//mainboard did not react to poke --> reset it //TODO: if reset doesnt help after x times, shut down all systems and restart.
 
-		for(i = 0; i < 5; i++)
-		{
-			__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts
-			__no_operation();                       // Set breakpoint >>here<< and read
-		}
-		//reset poke pin
-		CLR_PIN(PORT_MB_POKE, PIN_MB_POKE);
-		//power up mainboard
-		module_set_state(M_M, ON);
+		mainboard_reset();
 		//reset counter
 		mainboard_poke_counter = 0;
 		return -1;
@@ -54,7 +43,7 @@ void mainboard_poke_reset_counter()
 	//reset counter
 	mainboard_poke_counter = 0;
 	//reset poke pin if already activated
-	CLR_PIN(PORT_MB_POKE, PIN_MB_POKE);
+//	CLR_PIN(PORT_MB_POKE, PIN_MB_POKE) --> not needed anymore
 }
 
 void i2c_receive_callback()

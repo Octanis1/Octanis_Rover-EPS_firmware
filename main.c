@@ -115,7 +115,7 @@ void init_eps()
 	//enable both 5V sources, if battery voltage allows it:
 
 
-	if(eps_status.v_bat > BOOT_THRESHOLD)
+	if(eps_status.v_bat > BOOT_THRESHOLD && (PORT_DIGITAL_IN & PIN_DIGITAL_6) > 0) //if button is pressed at the beginning, don't turn on system.
 	{
 		module_status[M_5_GPS] = TURN_ON;
 		module_status[M_5_RPI] = TURN_ON;
