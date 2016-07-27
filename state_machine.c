@@ -13,8 +13,8 @@ void eps_update_values()
 	eps_status.v_bat = (uint16_t)(ADC_read(AIN_V_BAT_ADDR) * 5000.0f / 4096.0f);
 	eps_status.t_bat = (uint16_t)(A0 * 9100.0f / (2.0f*eps_status.analog_ext1 - A0));
 	eps_status.v_solar = (uint16_t)(ADC_read(AIN_V_SC_ADDR) * 8250.0f / 4096.0f);
-	eps_status.current_in = (uint16_t)(ADC_read(AIN_I_IN_ADDR) * 5000.0f / 4096.0f);
-	eps_status.current_out = (uint16_t)(ADC_read(AIN_I_OUT_ADDR) * 5000.0f / 4096.0f);
+	eps_status.current_in = (uint16_t)(ADC_read(AIN_I_IN_ADDR) * 2500.0f / 4096.0f); // 20 mOhm resistor
+	eps_status.current_out = (uint16_t)(ADC_read(AIN_I_OUT_ADDR) * 5000.0f / 4096.0f); // 10mOhm resistor
 
 //	eps_status.analog_ext2 = ADC_read(AIN_A_EXT2_ADDR);
 //	eps_status.analog_ext3 = ADC_read(AIN_A_EXT3_ADDR);
@@ -300,7 +300,7 @@ void eps_update_user_interface()
 	}
 	// LEDs:
 	// battery full:
-	if(eps_status.v_bat > THRESHOLD_95 && (eps_status.current_in-eps_status.current_out) < 100)
+	if(eps_status.v_bat > THRESHOLD_95 && (eps_status.current_in-eps_status.current_out) < 100) //TODO: test this value in practice.
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
 	else if(eps_status.v_bat < THRESHOLD_95-THRESHOLD_LED_HYS)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
