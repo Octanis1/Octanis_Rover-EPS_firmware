@@ -2,8 +2,12 @@
 #include "eps_hal.h"
 #include <stdint.h>
 
+static char system_on_off = 0;
 eps_status_t eps_status;
 module_status_t module_status[N_MODULES]; //stores the answers to be sent to an eventual i2c request
+
+void turn_off_all_modules();
+void force_turn_on_mainboard();
 
 void eps_update_values()
 {
@@ -127,13 +131,7 @@ void eps_update_states()
 
 	if(eps_status.v_bat < THRESHOLD_0) //low bat voltage threshold
 	{
-		//turn off all modules (inc. Mainboard)
-		for(i = 0; i < N_MODULES; i++)
-		{
-			//turn off module
-			if(module_status[i] == MODULE_ON)
-				module_status[i] = TURN_OFF;
-		}
+		turn_off_all_modules();
 	}
 	else if(eps_status.v_bat < ALL_OFF_THRESHOLD) //low bat voltage threshold
 	{
@@ -188,10 +186,9 @@ void eps_update_states()
 	}
 
 	// TURN ON mainboard if battery is again sufficiently charged:
-	if(module_status[M_M] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD)
+	if(module_status[M_M] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD && system_on_off == 1)
 	{
-		module_set_state(M_M, 0);
-		module_status[M_M] = TURN_ON;
+		force_turn_on_mainboard();
 	}
 
 
@@ -329,7 +326,152 @@ void eps_update_user_interface()
 	else
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_5);
 
+#else
 
+	////////////////////////////  check button: //////////////////////////////////
+	static char button_state = 0;
+	static char button_prev_state = 0;
+
+	button_prev_state = button_state;
+
+	if((PORT_DIGITAL_IN & PIN_DIGITAL_6) == 0)
+	{
+		button_state = 1;
+		if(button_prev_state == 0) //swich has been turned on.
+		{
+			//to avoid accidental turn on-off, check multiple times.
+			timer_delay50(1);
+			if((PORT_DIGITAL_IN & PIN_DIGITAL_6) == 0)
+			{
+				//turn on all systems:
+				turn_on_all_rover_modules();
+			}
+			else
+				button_state = 0;
+		}
+
+	}
+	else
+	{
+		button_state = 0;
+		if(button_prev_state == 1) //shut down all systems.
+		{
+			//to avoid accidental turn on-off, check multiple times.
+			timer_delay50(1);
+			if((PORT_DIGITAL_IN & PIN_DIGITAL_6) > 0)
+			{
+				system_on_off = 0;
+				turn_off_all_modules();
+			}
+			else
+				button_state = 1;
+		}
+	}
+
+	//check that Olimex is in correct state (might not be because wait for boot not respected):
+	if(system_on_off == 1 && module_status[M_5_OLIMEX] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD)
+		module_status[M_5_OLIMEX] = TURN_ON;
+	else if(system_on_off == 0 && module_status[M_5_OLIMEX] == MODULE_ON)
+		module_status[M_5_OLIMEX] = TURN_OFF;
+
+	//check if everyting is off and switch is on position off -> go to sleep!
+	if(system_on_off == 0 && module_status[0] == MODULE_OFF)
+	{
+		int n_sys_on = 0;
+		int i;
+		for(i = 0; i < N_MODULES; i++)
+		{
+			//turn off module
+			if(module_status[i] != MODULE_OFF)
+				n_sys_on++;
+		}
+		if(n_sys_on==0)
+		{
+			DIGITAL_IE |= PIN_BUTTON;
+			timer0_A_stop(); //stop timer to make it possible to turn off SMCLK.
+			__bis_SR_register(LPM4_bits + GIE);        // Enter LPM0 w/ interrupts
+		}
+	}
 
 #endif
 }
+
+void turn_off_all_modules()
+{
+	int i;
+	//turn off all modules (inc. Mainboard)
+	for(i = 0; i < N_MODULES; i++)
+	{
+		//turn off module
+		if(module_status[i] == MODULE_ON)
+			module_status[i] = TURN_OFF;
+	}
+	// Also turn off current measurement
+	CLR_PIN(PORT_DIGITAL_OUT, PIN_INA_VCC);
+}
+
+#ifndef FIRMWARE_BASE_STATION
+
+void force_turn_on_mainboard()
+{
+	//system can be turned on:
+	system_on_off = 1;
+	//enable current measurements:
+	SET_PIN(PORT_DIGITAL_OUT, PIN_INA_VCC);
+	//enable mainboard
+	module_set_state(M_M, 1);
+	module_status[M_M] = MODULE_ON;
+}
+
+void turn_on_all_rover_modules()
+{
+
+	//check for sufficient battery
+	ADC_update(); //get ADC values
+	eps_update_values();
+	//Buzzer confirmation #1:
+	module_set_state(BUZZER, 1);
+	timer_delay100(1);
+	module_set_state(BUZZER, 0);
+	timer_delay100(1);
+
+	if(eps_status.v_bat > MAINBOARD_THRESHOLD && (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
+	{
+		//Buzzer confirmation #2:
+		module_set_state(BUZZER, 1);
+		timer_delay100(1);
+		module_set_state(BUZZER, 0);
+		timer_delay100(1);
+		force_turn_on_mainboard();
+	}
+
+	if(eps_status.v_bat > BOOT_THRESHOLD && (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
+	{
+		//Buzzer confirmation #3:
+		module_set_state(BUZZER, 1);
+		timer_delay100(1);
+		module_set_state(BUZZER, 0);
+		timer_delay100(1);
+
+		//enable GPS and rockblock
+		module_set_state(M_52, 1);
+		module_status[M_52] = MODULE_ON;
+
+		timer_delay100(2);
+
+		//enable Olimex
+		module_set_state(M_5_OLIMEX, 1);
+		module_status[M_5_OLIMEX] = TURN_ON;
+		//enable Lidar logic
+		module_set_state(M_331, 1);
+		module_status[M_331] = MODULE_ON;
+
+		timer_delay100(2);
+		//enable Lidar motor
+		module_set_state(M_11, 1);
+		module_status[M_11] = MODULE_ON;
+	}
+
+
+}
+#endif

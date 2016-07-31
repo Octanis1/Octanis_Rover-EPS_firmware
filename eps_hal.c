@@ -37,6 +37,9 @@ void gpio_init()
 	P2DIR = BIT0 + BIT1 + BIT3 + BIT5 + BIT6;
 	P2SEL0 = 0x00; //standard gpio
 	P2SEL1 = 0x00;
+	//Falling edge interrupt enable on button pin:
+	P2IES |= PIN_BUTTON;
+	P2IV = 0; //the previous register set may cause an interrupt.
 
 	P3OUT = PIN_DIRECT_EN + PIN_3V3_M_EN; // module pins p3.0-6 output, 3.7 pulldown, everything off (main & direct are active low), SOLAR ON (active low)
 	P3REN = 0xe0;
@@ -57,6 +60,23 @@ void gpio_init()
 	PJDIR = 0x07;
 	PJSEL0 = 0x00; //standard gpio
 	PJSEL1 = 0x00;
+}
+
+// Timer0 A interrupt service routine CC1-2, OV
+// Timer interrupt currently not in use
+#pragma vector=PORT2_VECTOR
+__interrupt void port2_isr()
+{
+	P2IV = 0;
+
+	//check if button is still switched on.
+	if((PORT_DIGITAL_IN & PIN_BUTTON) == 0)
+	{
+		DIGITAL_IE &= PIN_BUTTON;
+		//restart previously stopped timer:
+		timer0_A_start();
+		LPM4_EXIT;
+	}
 }
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -216,7 +236,17 @@ void timer0_A_init()
 	TA0CCTL0 = CCIE;                     // TA0CCR0 interrupt enabled
 
 	TA0EX0 = TAIDEX_7;					 // Prescaler: divide by 8
-	TA0CTL = TASSEL_2 + MC_2 + ID_3;     // activate timer, SMCLK, contmode, prescaler 1:8
+	TA0CTL = TASSEL_2 + MC__CONTINUOUS + ID_3;     // activate timer, SMCLK, contmode, prescaler 1:8
+}
+
+void timer0_A_start()
+{
+	TA0CTL = TASSEL_2 + MC__CONTINUOUS + ID_3;     // activate timer, SMCLK, contmode, prescaler 1:8
+}
+
+void timer0_A_stop()
+{
+	TA0CTL = TASSEL_2 + MC__STOP + ID_3;     // activate timer, SMCLK, contmode, prescaler 1:8
 }
 
 //multiple of 100ms delay

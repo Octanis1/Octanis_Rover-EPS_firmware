@@ -48,4 +48,8 @@ void eps_update_values();
 void eps_update_states();
 void eps_update_user_interface();
 
+#ifndef FIRMWARE_BASE_STATION
+void turn_on_all_rover_modules();
+#endif
+
 #endif /* STATE_MACHINE_H_ */

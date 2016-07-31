@@ -8,7 +8,7 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
-#define FIRMWARE_BASE_STATION 	1
+//#define FIRMWARE_BASE_STATION 	1
 
 #include <msp430fr5969.h>
 
@@ -78,10 +78,14 @@
 #define PORT_DIGITAL_IN		P2IN
 #define PIN_DIGITAL_1		BIT5		// LED battery full (95% or more)
 #define PIN_DIGITAL_2		BIT6		// LED battery good (40% or more)
-#define PIN_DIGITAL_3		BIT0		// LED EPS on (0% bat or more)
+#define PIN_DIGITAL_3		BIT0		// LED EPS on (0% bat or more). On rover EPS, this is the INA213 supply pin
 #define PIN_DIGITAL_4		BIT1		// LED rPI on
 #define PIN_DIGITAL_5		BIT3		// LED dGPS on
 #define PIN_DIGITAL_6		BIT4		// user button; use pull-up
+//more meaningfull names:
+#define PIN_INA_VCC			PIN_DIGITAL_3
+#define PIN_BUTTON			PIN_DIGITAL_6
+#define DIGITAL_IE			P2IE
 
 //ANALOG PORTS USED AS DIGITAL GPIOs
 #define PORT_ANALOG_OUT		P4OUT
@@ -186,6 +190,8 @@ void i2c_receive_callback(); //has to be implemented, is called by interrupt
 void gpio_init();
 
 void timer0_A_init();
+void timer0_A_start();
+void timer0_A_stop();
 void timer_delay100(int t10);
 void timer_delay50(int t50);
 

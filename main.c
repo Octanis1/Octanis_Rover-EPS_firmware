@@ -96,6 +96,7 @@ void init_eps()
 	//enable interrupts
 	__bis_SR_register(GIE);
 
+#ifdef FIRMWARE_BASE_STATION
 	//Buzzer check:
 	module_set_state(BUZZER, 1);
 	timer_delay100(1);
@@ -105,52 +106,18 @@ void init_eps()
 	timer_delay100(1);
 	module_set_state(BUZZER, 0);
 	timer_delay100(1);
-
-
 	//check for sufficient battery
 	ADC_update(); //get ADC values
 	eps_update_values();
 
-#ifdef FIRMWARE_BASE_STATION
 	//enable both 5V sources, if battery voltage allows it:
-
-
 	if(eps_status.v_bat > BOOT_THRESHOLD && (PORT_DIGITAL_IN & PIN_DIGITAL_6) > 0) //if button is pressed at the beginning, don't turn on system.
 	{
 		module_status[M_5_GPS] = TURN_ON;
 		module_status[M_5_RPI] = TURN_ON;
 	}
 #else
-	if(eps_status.v_bat > MAINBOARD_THRESHOLD)
-	{
-		//enable mainboard
-		module_set_state(M_M, 1);
-		module_status[M_M] = MODULE_ON;
-	}
-
-	if(eps_status.v_bat > BOOT_THRESHOLD)
-	{
-		timer_delay100(2);
-
-		//enable GPS and rockblock
-		module_set_state(M_52, 1);
-		module_status[M_52] = MODULE_ON;
-
-		timer_delay100(2);
-
-		//enable Olimex
-		module_set_state(M_5_OLIMEX, 1);
-		module_status[M_5_OLIMEX] = TURN_ON;
-		//enable Lidar logic
-		module_set_state(M_331, 1);
-		module_status[M_331] = MODULE_ON;
-
-		timer_delay100(2);
-		//enable Lidar motor
-		module_set_state(M_11, 1);
-		module_status[M_11] = MODULE_ON;
-	}
-
+	turn_on_all_rover_modules();
 #endif
 
 
