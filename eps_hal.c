@@ -20,6 +20,7 @@ float ADC_result[ANALOG_PORTS];
 //volatile unsigned int TXData_ptr_start = 0; //points to next char to be sent
 //volatile unsigned int TXData_ptr_end = 0; //points to end (free spot)
 
+static char wakeup_source = WAKEUP_NONE;
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 void gpio_init()
 {
@@ -72,6 +73,7 @@ __interrupt void port2_isr()
 	//check if button is still switched on.
 	if((PORT_DIGITAL_IN & PIN_BUTTON) == 0)
 	{
+		wakeup_source = WAKEUP_FROM_BUTTON;
 		DIGITAL_IE &= PIN_BUTTON;
 		//restart previously stopped timer:
 		timer0_A_start();
@@ -464,7 +466,7 @@ void module_set_state(int module_number, char state)
 
 int module_update_shutdown_signal(int module_number, char state){
 	static int power_off_counter = 0; //add some extra delay after the GPIO is low.
-	static int force_power_off_counter = 0;
+	static int force_change_state_counter = 0;
 	if(state == START_SHUTDOWN)
 	{
 		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
@@ -473,11 +475,11 @@ int module_update_shutdown_signal(int module_number, char state){
 		else
 			power_off_counter = 0;
 
-		force_power_off_counter++;
+		force_change_state_counter++;
 
-		if(power_off_counter>10 || force_power_off_counter > 600) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
+		if(power_off_counter>10 || force_change_state_counter > 600) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
 		{
-			force_power_off_counter = 0;
+			force_change_state_counter = 0;
 			power_off_counter = 0;
 			return SHUTDOWN_COMPLETE;
 		}
@@ -486,9 +488,13 @@ int module_update_shutdown_signal(int module_number, char state){
 	}
 	else if(state == START_BOOT)
 	{
+		force_change_state_counter++;
 		CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
-		if((PORT_BOOT_STATE & PIN_BOOT_STATE))
+		if((PORT_BOOT_STATE & PIN_BOOT_STATE) || force_change_state_counter > 600)
+		{
+			force_change_state_counter = 0;
 			return SYSTEM_ON;
+		}
 		else
 			return START_BOOT;
 	}
@@ -524,3 +530,43 @@ void mainboard_reset()
 	CLR_PIN(DIR_MB, PIN_MB_RESET_N);
 }
 
+void goto_deepsleep(char lowbat)
+{
+	DIGITAL_IE |= PIN_BUTTON;
+	timer0_A_stop(); //stop timer to make it possible to turn off SMCLK.
+
+	if(lowbat) //reason was low battery --> enable comperator to wake up
+	{
+		// configure comparator:
+		// enable C3 = VBAT (+) and C5 = 1/2*VCC resistive divider (-) inputs
+		CECTL0 = CEIPEN + CEIPSEL_3 + CEIMEN + CEIMSEL_5;
+		CECTL1 = CEON + CEPWRMD_2;      // Enable comp; ultra-low power md; rising edge; don't use reference.
+		CEINT = CEIE;                   // Enable interrupt for Comparator and clear them all.
+	}
+	__bis_SR_register(LPM4_bits + GIE);        // Enter LPM0 w/ interrupts
+}
+
+char get_and_clear_wakeup_source()
+{
+	char retval = wakeup_source;
+	wakeup_source = WAKEUP_NONE;
+	return retval;
+}
+
+
+// Comp_A interrupt service routine -- toggles LED
+#pragma vector=COMP_E_VECTOR
+__interrupt void Comp_A_ISR (void)
+{
+	CEINT &= ~(CEIFG + CEIE); // Clear Interrupt flag and disable interrupt
+
+	//check if button is still switched on.
+	if((PORT_DIGITAL_IN & PIN_BUTTON) == 0)
+	{
+		wakeup_source = WAKEUP_FROM_COMPARATOR;
+
+		//restart previously stopped timer:
+		timer0_A_start();
+		LPM4_EXIT;
+	}
+}

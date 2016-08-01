@@ -139,7 +139,7 @@
 //-----------------------------------------------------------
 //battery voltage threshold levels (0%: 3V [for testing at ambient temperature]; 100% = 4.1V)
 #define BAT_FULL		4100
-#define BAT_EMPTY	3000
+#define BAT_EMPTY	2800
 
 #define BAT_FS		(BAT_FULL-BAT_EMPTY)
 
@@ -154,11 +154,16 @@
 #define THRESHOLD_5		(uint16_t)(BAT_EMPTY+0.05*BAT_FS)		//5% of charge
 #define THRESHOLD_0		(uint16_t)(BAT_EMPTY)					//0% of charge
 
-#define BOOT_THRESHOLD		THRESHOLD_20 //minimum v_bat to start booting the raspi or olimex
+#define ALL_OFF_THRESHOLD	THRESHOLD_10 	//retain some charge for emergency
 #define BUZZER_THRESHOLD		THRESHOLD_15
-#define MAINBOARD_THRESHOLD	THRESHOLD_10
-#define ALL_OFF_THRESHOLD	THRESHOLD_5
+#ifdef FIRMWARE_BASE_STATION
+	#define SYSTEMS_THRESHOLD	ALL_OFF_THRESHOLD
+#else
+	#define SYSTEMS_THRESHOLD	THRESHOLD_15 //switch off other systems than mainboard.
+#endif
 
+#define THRESHOLD_MODULE_HYS		(uint16_t)(BAT_FS*0.09)			//9% hysteresis when turning on modules again
+#define THRESHOLD_BUZZER_HYS		(uint16_t)(BAT_FS*0.04)			//4% hysteresis for buzzer on/off
 #define THRESHOLD_LED_HYS		(uint16_t)(BAT_FS*0.03)			//3% of hysteresis when turning on/off LEDs
 
 //#define THRESHOLD_80	3800	 	//80% of charge (100% is 4.2V & 636 adc counts)
@@ -212,6 +217,12 @@ int module_update_shutdown_signal(int module_number, char state);
 int module_check_boot_state();
 
 void mainboard_reset();
+
+#define WAKEUP_NONE				0
+#define WAKEUP_FROM_COMPARATOR	1
+#define WAKEUP_FROM_BUTTON		2
+char get_and_clear_wakeup_source();
+void goto_deepsleep(char lowbat); //if lowbat == 1, deepsleep is due to low battery and comparator should be set to wake up!
 
 //TODO s:
 //module interface

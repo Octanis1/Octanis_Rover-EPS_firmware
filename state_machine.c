@@ -6,8 +6,13 @@ static char system_on_off = 0;
 eps_status_t eps_status;
 module_status_t module_status[N_MODULES]; //stores the answers to be sent to an eventual i2c request
 
-void turn_off_all_modules();
+void turn_off_all_modules(char lowbat); //if lowbat==1, this forces everything to turn off immediately and enables comparator before deepsleep
 void force_turn_on_mainboard();
+
+#ifndef FIRMWARE_BASE_STATION
+static char button_state = 0;
+static char button_prev_state = 0;
+#endif
 
 void eps_update_values()
 {
@@ -38,23 +43,29 @@ void eps_update_values()
 void eps_update_states()
 {
 	static char buzzer_state = 0;
-	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD)
+	if(eps_status.v_bat < BUZZER_THRESHOLD && eps_status.v_bat > ALL_OFF_THRESHOLD + THRESHOLD_BUZZER_HYS && system_on_off == 1)
+		buzzer_state = 1;
+	else if(eps_status.v_bat > BUZZER_THRESHOLD+THRESHOLD_BUZZER_HYS || eps_status.v_bat < ALL_OFF_THRESHOLD)
+		buzzer_state = 0;
+
+	if(buzzer_state == 1)
 	{
 		//Start buzzing
-		if(buzzer_state == 0)
+		if(module_status[BUZZER] == MODULE_OFF)
 		{
 			module_set_state(BUZZER, 1);
-			buzzer_state = 1;
+			module_status[BUZZER] = MODULE_ON;
 		}
 		else
 		{
 			module_set_state(BUZZER, 0);
-			buzzer_state = 0;
+			module_status[BUZZER] = MODULE_OFF;
 		}
 	}
 	else
 	{
 		module_set_state(BUZZER, 0);
+		module_status[BUZZER] = MODULE_OFF;
 		buzzer_state = 0;
 	}
 
@@ -129,13 +140,16 @@ void eps_update_states()
 		}
 	}
 
-	if(eps_status.v_bat < THRESHOLD_0) //low bat voltage threshold
+	if(eps_status.v_bat < THRESHOLD_0) //emergency off
 	{
-		turn_off_all_modules();
+		turn_off_all_modules(1);
 	}
 	else if(eps_status.v_bat < ALL_OFF_THRESHOLD) //low bat voltage threshold
 	{
-		//turn off all modules except mb
+		turn_off_all_modules(0);
+	}
+	else if(eps_status.v_bat < SYSTEMS_THRESHOLD) //turn off all modules except mb
+	{
 		for(i = 0; i < N_MODULES; i++)
 		{
 			if(i != M_M && i!= BUZZER)
@@ -146,53 +160,66 @@ void eps_update_states()
 			}
 		}
 	}
-	else if(eps_status.v_bat < THRESHOLD_40) // rather low bat voltage threshold -> reduce internal temp
-	{
-		if(eps_status.t_bat < -1000)
-		{
-			//turn on heater
-			module_set_state(H_T3, 1);
-			module_status[H_T3] = MODULE_ON;
-			module_set_state(H_T2, 1);
-			module_status[H_T2] = MODULE_ON;
-		}
-		else if(eps_status.t_bat > -500)
-		{
-			//turn off heater
-			module_set_state(H_T3, 0);
-			module_status[H_T3] = MODULE_OFF;
-			module_set_state(H_T2, 0);
-			module_status[H_T2] = MODULE_OFF;
-		}
-	}
-	else
-	{
-		if(eps_status.t_bat < -500)
-		{
-			//turn on heater
-			module_set_state(H_T3, 1);
-			module_status[H_T3] = MODULE_ON;
-			module_set_state(H_T2, 1);
-			module_status[H_T2] = MODULE_ON;
-		}
-		else if(eps_status.t_bat > 0)
-		{
-			//turn off heater
-			module_set_state(H_T3, 0);
-			module_status[H_T3] = MODULE_OFF;
-			module_set_state(H_T2, 0);
-			module_status[H_T2] = MODULE_OFF;
-		}
-	}
 
-	// TURN ON mainboard if battery is again sufficiently charged:
-	if(module_status[M_M] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD && system_on_off == 1)
+//	else if(eps_status.v_bat < THRESHOLD_40) // rather low bat voltage threshold -> reduce internal temp
+//	{
+//		if(eps_status.t_bat < -1000)
+//		{
+//			//turn on heater
+//			module_set_state(H_T3, 1);
+//			module_status[H_T3] = MODULE_ON;
+//			module_set_state(H_T2, 1);
+//			module_status[H_T2] = MODULE_ON;
+//		}
+//		else if(eps_status.t_bat > -500)
+//		{
+//			//turn off heater
+//			module_set_state(H_T3, 0);
+//			module_status[H_T3] = MODULE_OFF;
+//			module_set_state(H_T2, 0);
+//			module_status[H_T2] = MODULE_OFF;
+//		}
+//	}
+//	else
+//	{
+//		if(eps_status.t_bat < -500)
+//		{
+//			//turn on heater
+//			module_set_state(H_T3, 1);
+//			module_status[H_T3] = MODULE_ON;
+//			module_set_state(H_T2, 1);
+//			module_status[H_T2] = MODULE_ON;
+//		}
+//		else if(eps_status.t_bat > 0)
+//		{
+//			//turn off heater
+//			module_set_state(H_T3, 0);
+//			module_status[H_T3] = MODULE_OFF;
+//			module_set_state(H_T2, 0);
+//			module_status[H_T2] = MODULE_OFF;
+//		}
+//	}
+
+	// TURN ON mainboard if battery is again sufficiently charged.
+	// function is also needed to turn on current measurement, so keep it also for FBS code!!
+	if(module_status[M_M] == MODULE_OFF
+			&& eps_status.v_bat > ALL_OFF_THRESHOLD + THRESHOLD_MODULE_HYS
+			&& system_on_off == 1)
 	{
 		force_turn_on_mainboard();
 	}
 
+#ifndef FIRMWARE_BASE_STATION
 
-#ifdef FIRMWARE_BASE_STATION
+	// TURN ON all systems if battery is again sufficiently charged:
+	if(module_status[M_5_OLIMEX] == MODULE_OFF
+			&& eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS
+			&& system_on_off == 1)
+	{
+		turn_on_all_rover_modules();
+	}
+
+#else
 	// Workaround for ESD problem (if Raspi shuts down by accident)
 	static int rpi_off_timeout = 0;
 
@@ -329,15 +356,14 @@ void eps_update_user_interface()
 #else
 
 	////////////////////////////  check button: //////////////////////////////////
-	static char button_state = 0;
-	static char button_prev_state = 0;
+
 
 	button_prev_state = button_state;
 
 	if((PORT_DIGITAL_IN & PIN_DIGITAL_6) == 0)
 	{
 		button_state = 1;
-		if(button_prev_state == 0) //swich has been turned on.
+		if(button_prev_state == 0 || get_and_clear_wakeup_source() == WAKEUP_FROM_COMPARATOR) //swich has been turned on.
 		{
 			//to avoid accidental turn on-off, check multiple times.
 			timer_delay50(1);
@@ -361,7 +387,7 @@ void eps_update_user_interface()
 			if((PORT_DIGITAL_IN & PIN_DIGITAL_6) > 0)
 			{
 				system_on_off = 0;
-				turn_off_all_modules();
+				turn_off_all_modules(0);
 			}
 			else
 				button_state = 1;
@@ -369,13 +395,13 @@ void eps_update_user_interface()
 	}
 
 	//check that Olimex is in correct state (might not be because wait for boot not respected):
-	if(system_on_off == 1 && module_status[M_5_OLIMEX] == MODULE_OFF && eps_status.v_bat > BOOT_THRESHOLD)
+	if(system_on_off == 1 && module_status[M_5_OLIMEX] == MODULE_OFF && eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS)
 		module_status[M_5_OLIMEX] = TURN_ON;
 	else if(system_on_off == 0 && module_status[M_5_OLIMEX] == MODULE_ON)
 		module_status[M_5_OLIMEX] = TURN_OFF;
 
 	//check if everyting is off and switch is on position off -> go to sleep!
-	if(system_on_off == 0 && module_status[0] == MODULE_OFF)
+	if(system_on_off == 0 && (PORT_DIGITAL_IN & PIN_BUTTON) == 1)
 	{
 		int n_sys_on = 0;
 		int i;
@@ -387,27 +413,36 @@ void eps_update_user_interface()
 		}
 		if(n_sys_on==0)
 		{
-			DIGITAL_IE |= PIN_BUTTON;
-			timer0_A_stop(); //stop timer to make it possible to turn off SMCLK.
-			__bis_SR_register(LPM4_bits + GIE);        // Enter LPM0 w/ interrupts
+			goto_deepsleep(0);
 		}
 	}
 
 #endif
 }
 
-void turn_off_all_modules()
+void turn_off_all_modules(char lowbat)
 {
 	int i;
 	//turn off all modules (inc. Mainboard)
 	for(i = 0; i < N_MODULES; i++)
 	{
+		if(lowbat)
+		{
+			module_set_state(i, 0);
+			module_status[i] = MODULE_OFF;
+		}
+		else
+		{
 		//turn off module
 		if(module_status[i] == MODULE_ON)
 			module_status[i] = TURN_OFF;
+		}
 	}
 	// Also turn off current measurement
 	CLR_PIN(PORT_DIGITAL_OUT, PIN_INA_VCC);
+
+	if(lowbat) //
+		goto_deepsleep(lowbat);
 }
 
 #ifndef FIRMWARE_BASE_STATION
@@ -435,8 +470,12 @@ void turn_on_all_rover_modules()
 	module_set_state(BUZZER, 0);
 	timer_delay100(1);
 
-	if(eps_status.v_bat > MAINBOARD_THRESHOLD && (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
+	if(eps_status.v_bat > ALL_OFF_THRESHOLD + THRESHOLD_MODULE_HYS
+			&& (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
 	{
+		//needed at startup!
+		button_state = 1;
+		button_prev_state = 1;
 		//Buzzer confirmation #2:
 		module_set_state(BUZZER, 1);
 		timer_delay100(1);
@@ -445,7 +484,7 @@ void turn_on_all_rover_modules()
 		force_turn_on_mainboard();
 	}
 
-	if(eps_status.v_bat > BOOT_THRESHOLD && (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
+	if(eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS  && (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
 	{
 		//Buzzer confirmation #3:
 		module_set_state(BUZZER, 1);
