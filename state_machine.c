@@ -276,7 +276,7 @@ void eps_update_user_interface()
 			}
 			else if(module_status[M_5_RPI] == MODULE_OFF)
 			{
-				if(eps_status.v_bat > BOOT_THRESHOLD)
+				if(eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS)
 				{
 					module_status[M_5_RPI] = TURN_ON;
 					module_status[M_5_GPS] = TURN_ON;
@@ -330,9 +330,9 @@ void eps_update_user_interface()
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
 
 	// battery good:
-	if(eps_status.v_bat > BOOT_THRESHOLD)
+	if(eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_LED_HYS)
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_2);
-	else if(eps_status.v_bat < THRESHOLD_40-THRESHOLD_LED_HYS)
+	else if(eps_status.v_bat < SYSTEMS_THRESHOLD)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_2);
 
 	// EPS on / battery > 0%:
@@ -445,8 +445,6 @@ void turn_off_all_modules(char lowbat)
 		goto_deepsleep(lowbat);
 }
 
-#ifndef FIRMWARE_BASE_STATION
-
 void force_turn_on_mainboard()
 {
 	//system can be turned on:
@@ -457,6 +455,8 @@ void force_turn_on_mainboard()
 	module_set_state(M_M, 1);
 	module_status[M_M] = MODULE_ON;
 }
+
+#ifndef FIRMWARE_BASE_STATION
 
 void turn_on_all_rover_modules()
 {

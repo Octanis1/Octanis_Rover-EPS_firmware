@@ -74,7 +74,7 @@ __interrupt void port2_isr()
 	if((PORT_DIGITAL_IN & PIN_BUTTON) == 0)
 	{
 		wakeup_source = WAKEUP_FROM_BUTTON;
-		DIGITAL_IE &= PIN_BUTTON;
+		DIGITAL_IE &= ~PIN_BUTTON;
 		//restart previously stopped timer:
 		timer0_A_start();
 		LPM4_EXIT;
@@ -477,7 +477,7 @@ int module_update_shutdown_signal(int module_number, char state){
 
 		force_change_state_counter++;
 
-		if(power_off_counter>10 || force_change_state_counter > 600) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
+		if(power_off_counter>10 || force_change_state_counter > 400) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
 		{
 			force_change_state_counter = 0;
 			power_off_counter = 0;
@@ -490,7 +490,7 @@ int module_update_shutdown_signal(int module_number, char state){
 	{
 		force_change_state_counter++;
 		CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
-		if((PORT_BOOT_STATE & PIN_BOOT_STATE) || force_change_state_counter > 600)
+		if((PORT_BOOT_STATE & PIN_BOOT_STATE) || force_change_state_counter > 400)
 		{
 			force_change_state_counter = 0;
 			return SYSTEM_ON;

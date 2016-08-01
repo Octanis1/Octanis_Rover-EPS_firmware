@@ -8,7 +8,7 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
-//#define FIRMWARE_BASE_STATION 	1
+#define FIRMWARE_BASE_STATION 	1
 
 #include <msp430fr5969.h>
 
