@@ -1,12 +1,12 @@
 #include "state_machine.h"
 #include "eps_hal.h"
+#include "communication.h"
 #include <stdint.h>
 
 static char system_on_off = 0;
 eps_status_t eps_status;
 module_status_t module_status[N_MODULES]; //stores the answers to be sent to an eventual i2c request
 
-void turn_off_all_modules(char lowbat); //if lowbat==1, this forces everything to turn off immediately and enables comparator before deepsleep
 void force_turn_on_mainboard();
 
 #ifndef FIRMWARE_BASE_STATION
@@ -95,6 +95,9 @@ void eps_update_states()
 				{
 					module_set_state(M_5_OLIMEX, 0);
 					module_status[M_5_OLIMEX] = MODULE_OFF;
+					module_set_state(BUZZER, 1); //confirmation
+					timer_delay100(6);
+					module_set_state(BUZZER, 0);
 				}
 			}
 #endif
@@ -128,6 +131,9 @@ void eps_update_states()
 				if(module_update_shutdown_signal(M_5_OLIMEX, START_BOOT) == SYSTEM_ON)
 				{
 					module_status[M_5_OLIMEX] = MODULE_ON;
+					module_set_state(BUZZER, 1); //confirmation
+					timer_delay100(3);
+					module_set_state(BUZZER, 0);
 				}
 			}
 #endif
@@ -140,25 +146,51 @@ void eps_update_states()
 		}
 	}
 
-	if(eps_status.v_bat < THRESHOLD_0) //emergency off
+	static int emergency_off_counter = 0;
+	static int all_off_counter = 0;
+	static int systems_off_counter = 0;
+
+	if(eps_status.v_bat < THRESHOLD_5) //emergency off
 	{
-		turn_off_all_modules(1);
+		emergency_off_counter++;
+		all_off_counter++;
+		systems_off_counter++;
+		if(emergency_off_counter > EMERGENCY_OFF_N_CYCLES)
+			turn_off_all_modules(1);
 	}
 	else if(eps_status.v_bat < ALL_OFF_THRESHOLD) //low bat voltage threshold
 	{
-		turn_off_all_modules(0);
+		emergency_off_counter = 0;
+		all_off_counter++;
+		systems_off_counter++;
+		if(all_off_counter > ALL_OFF_N_CYCLES)
+			turn_off_all_modules(0);
 	}
 	else if(eps_status.v_bat < SYSTEMS_THRESHOLD) //turn off all modules except mb
 	{
-		for(i = 0; i < N_MODULES; i++)
+		emergency_off_counter = 0;
+		all_off_counter = 0;
+		systems_off_counter++;
+
+		if(systems_off_counter > SYSTEMS_OFF_N_CYCLES)
 		{
-			if(i != M_M && i!= BUZZER)
+			for(i = 0; i < N_MODULES; i++)
 			{
-				//turn off module
-				if(module_status[i] == MODULE_ON)
-					module_status[i] = TURN_OFF;
+				if(i != M_M && i!= BUZZER)
+				{
+					//turn off module
+					if(module_status[i] == MODULE_ON)
+						module_status[i] = TURN_OFF;
+				}
 			}
 		}
+
+	}
+	else
+	{
+		emergency_off_counter = 0;
+		all_off_counter = 0;
+		systems_off_counter = 0;
 	}
 
 //	else if(eps_status.v_bat < THRESHOLD_40) // rather low bat voltage threshold -> reduce internal temp
@@ -202,11 +234,20 @@ void eps_update_states()
 
 	// TURN ON mainboard if battery is again sufficiently charged.
 	// function is also needed to turn on current measurement, so keep it also for FBS code!!
+	static int mainboard_on_counter = 0;
+
 	if(module_status[M_M] == MODULE_OFF
 			&& eps_status.v_bat > ALL_OFF_THRESHOLD + THRESHOLD_MODULE_HYS
-			&& system_on_off == 1)
+			&& system_on_off == 1
+			&& !are_all_systems_rebooting())
 	{
-		force_turn_on_mainboard();
+		mainboard_on_counter++;
+		if(mainboard_on_counter > MAINBOARD_ON_N_CYCLES)
+			force_turn_on_mainboard();
+	}
+	else
+	{
+		mainboard_on_counter = 0;
 	}
 
 #ifndef FIRMWARE_BASE_STATION
@@ -262,9 +303,14 @@ void eps_update_user_interface()
 				module_status[M_5_RPI] = TURN_OFF;
 				module_status[M_5_GPS] = TURN_OFF;
 			}
-			else if(module_status[M_5_RPI] == MODULE_OFF)
+			else if(module_status[M_5_RPI] == MODULE_OFF && module_status[M_5_GPS] == MODULE_ON)
 			{
 				module_status[M_5_GPS] = TURN_OFF;
+			}
+			else if(module_status[M_5_RPI] == MODULE_OFF && module_status[M_5_GPS] == MODULE_OFF)
+			{
+				module_status[M_5_RPI] = TURN_ON;
+				module_status[M_5_GPS] = TURN_ON;
 			}
 		}
 		else if(time_button_pressed > SHORT_BUTTON_TIME) //at least 2 seconds
@@ -323,9 +369,20 @@ void eps_update_user_interface()
 		}
 	}
 	// LEDs:
+	static char blink_led_state = 0; //use this variable for all the blinking leds so they have the same state
+	blink_led_state = !blink_led_state;
+
 	// battery full:
 	if(eps_status.v_bat > THRESHOLD_95 && (eps_status.current_in-eps_status.current_out) < 100) //TODO: test this value in practice.
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
+	else if(eps_status.current_in > 100) //charging -> blink green
+	{
+		if(blink_led_state)
+			SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
+		else
+			CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
+
+	}
 	else if(eps_status.v_bat < THRESHOLD_95-THRESHOLD_LED_HYS)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_1);
 
@@ -341,10 +398,18 @@ void eps_update_user_interface()
 	else if(eps_status.v_bat < THRESHOLD_0)
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_3);
 
-	// RasPi on:
-	if((module_status[M_5_RPI] == MODULE_ON) || (module_status[M_5_RPI] == TURN_OFF))
+	// RasPi state:
+	if((module_status[M_5_RPI] == MODULE_ON)) //LED on
 		SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
-	else
+	else if((module_status[M_5_RPI] == TURN_ON) || (module_status[M_5_RPI] == TURN_OFF)) //blink
+	{
+		if(blink_led_state)
+			SET_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
+		else
+			CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
+
+	}
+	else //off
 		CLR_PIN(PORT_DIGITAL_OUT, PIN_DIGITAL_4);
 
 	// GPS on:

@@ -8,7 +8,7 @@
 #ifndef EPS_HAL_H_
 #define EPS_HAL_H_
 
-#define FIRMWARE_BASE_STATION 	1
+//#define FIRMWARE_BASE_STATION 	1
 
 #include <msp430fr5969.h>
 
@@ -110,7 +110,8 @@
 #define TIMER0_A1_ENABLE		1
 #define TIMER0_A1_DELAY		0x0660 //ca. 100ms
 
-#define POKE_COUNTER_LIMIT	5
+#define POKE_COUNTER_LIMIT	121 // if no messages during N cycles, toggle the mainboard reset pin
+#define RESET_COUNTER_LIMIT	10 // if reset still necessary after N cycles shut down all systems and reboot.
 
 #define ANALOG_PORTS			6 //10
 #define ANALOG_NUM_AVG		16
@@ -139,7 +140,7 @@
 //-----------------------------------------------------------
 //battery voltage threshold levels (0%: 3V [for testing at ambient temperature]; 100% = 4.1V)
 #define BAT_FULL		4100
-#define BAT_EMPTY	2800
+#define BAT_EMPTY	2700
 
 #define BAT_FS		(BAT_FULL-BAT_EMPTY)
 
@@ -165,6 +166,14 @@
 #define THRESHOLD_MODULE_HYS		(uint16_t)(BAT_FS*0.09)			//9% hysteresis when turning on modules again
 #define THRESHOLD_BUZZER_HYS		(uint16_t)(BAT_FS*0.04)			//4% hysteresis for buzzer on/off
 #define THRESHOLD_LED_HYS		(uint16_t)(BAT_FS*0.03)			//3% of hysteresis when turning on/off LEDs
+
+//number of main loop cycles that have to pass with low battery voltage measurements before turn-off action is performed
+#define EMERGENCY_OFF_N_CYCLES	100
+#define ALL_OFF_N_CYCLES			50
+#define SYSTEMS_OFF_N_CYCLES		50
+
+//same for mainboard turn-on:
+#define MAINBOARD_ON_N_CYCLES	20
 
 //#define THRESHOLD_80	3800	 	//80% of charge (100% is 4.2V & 636 adc counts)
 //#define THRESHOLD_60	3250		//60% of charge

@@ -48,6 +48,8 @@ void eps_update_values();
 void eps_update_states();
 void eps_update_user_interface();
 
+void turn_off_all_modules(char lowbat); //if lowbat==1, this forces everything to turn off immediately and enables comparator before deepsleep
+
 #ifndef FIRMWARE_BASE_STATION
 void turn_on_all_rover_modules();
 #endif

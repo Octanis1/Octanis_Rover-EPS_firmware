@@ -472,13 +472,15 @@ int module_update_shutdown_signal(int module_number, char state){
 		SET_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
 		if((PORT_BOOT_STATE & PIN_BOOT_STATE) == 0)
 			power_off_counter++;
-		else
+		else if(power_off_counter<3) //to avoid accidental change of state.
 			power_off_counter = 0;
 
 		force_change_state_counter++;
 
-		if(power_off_counter>10 || force_change_state_counter > 400) //about 5 sec more delay. Also force power off if not able to shut down during 5 minutes
+		if(((power_off_counter>3) && (force_change_state_counter>90)) || force_change_state_counter > 180) //about 100 sec more delay. Also force power off if not able to shut down during 3 minutes
 		{
+			CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN); //!! to avoid leakage into GPIO while off.
+
 			force_change_state_counter = 0;
 			power_off_counter = 0;
 			return SHUTDOWN_COMPLETE;
@@ -490,7 +492,7 @@ int module_update_shutdown_signal(int module_number, char state){
 	{
 		force_change_state_counter++;
 		CLR_PIN(PORT_SHUTDOWN, PIN_SHUTDOWN);
-		if((PORT_BOOT_STATE & PIN_BOOT_STATE) || force_change_state_counter > 400)
+		if((PORT_BOOT_STATE & PIN_BOOT_STATE) || force_change_state_counter > 180)
 		{
 			force_change_state_counter = 0;
 			return SYSTEM_ON;

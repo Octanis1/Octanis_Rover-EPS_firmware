@@ -128,14 +128,12 @@ int main(void)
     WDTCTL = WDTPW | WDTHOLD;	// Stop watchdog timer
     PM5CTL0 &= ~LOCKLPM5;         // Disable the GPIO power-on default high-impedance mode
                                      // to activate previously configured port settings
-
-    int mainboard_poke_counter = 0;
 	
 	init_eps();
 
 	while (1) //execute once, then enter sleep mode until timer interrupt
 	{
-		mainboard_poke_iterate(&mainboard_poke_counter); //revive mainboard
+		mainboard_poke_iterate(); //revive mainboard
 		ADC_update(); //get ADC values
 		eps_update_values();
 		eps_update_states(); //update eps state according to received commands and measured analog values; if necessary, trigger interrupt for powered modules before shutting them down.

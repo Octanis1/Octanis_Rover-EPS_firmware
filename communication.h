@@ -8,6 +8,8 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
+char are_all_systems_rebooting();
+
 //void i2c_callback(char *buffer);
 int mainboard_poke_iterate();
 void mainboard_poke_reset_counter();

@@ -12,24 +12,71 @@
 #include "state_machine.h"
 
 volatile int mainboard_poke_counter = 0;
+static char all_systems_rebooting = 0;
+
+char are_all_systems_rebooting()
+{
+	return all_systems_rebooting;
+}
 
 int mainboard_poke_iterate()
 {
-	if(++mainboard_poke_counter == POKE_COUNTER_LIMIT)
-	{
-//		//poke mainboard --> not needed anymore
-//		SET_PIN(PORT_MB_POKE, PIN_MB_POKE);
-		return 1;
-	}
-	if(mainboard_poke_counter == 2 * POKE_COUNTER_LIMIT)
-	{
-		//mainboard did not react to poke --> reset it //TODO: if reset doesnt help after x times, shut down all systems and restart.
+#ifndef FIRMWARE_BASE_STATION
+	static int mainboard_reset_counter = 0;
 
-		mainboard_reset();
-		//reset counter
-		mainboard_poke_counter = 0;
-		return -1;
+	if(module_status[M_M] == MODULE_ON)
+	{
+		mainboard_poke_counter++;
+		if(mainboard_poke_counter > POKE_COUNTER_LIMIT)
+		{
+			//mainboard did not react to poke --> reset it
+			mainboard_reset();
+			//reset counter
+			mainboard_reset_counter++;
+			mainboard_poke_counter = 0;
+			if(mainboard_reset_counter > RESET_COUNTER_LIMIT)
+			{
+				// reset didnt help --> shut down all systems and restart.
+				// WARNING BEEP
+				int i;
+				for(i=20;i>0;i--)
+				{
+					module_set_state(BUZZER, 1);
+					timer_delay100(1);
+					module_set_state(BUZZER, 0);
+					timer_delay100(1);
+				}
+				turn_off_all_modules(0);
+				timer_delay100(20);
+				mainboard_reset_counter = 0;
+				all_systems_rebooting = 1;
+			}
+			return -1;
+		}
 	}
+	else // dont reset mainboard while it's off, so we can flash it.
+	{
+		mainboard_poke_counter = 0;
+	}
+
+	if(all_systems_rebooting) //check if we can turn them on again (everything must be completely off
+								//in order to avoid pin input leakage current through GPIOS
+	{
+		if(module_status[M_5_OLIMEX] == MODULE_OFF)
+		{
+			turn_on_all_rover_modules();
+			mainboard_poke_counter = 0;
+			mainboard_reset_counter = 0; //just to be sure
+			all_systems_rebooting = 0;
+		}
+		else if(module_status[M_5_OLIMEX] == MODULE_ON) //if it was not fully on before, we have to switch it off now!
+		{
+			module_status[M_5_OLIMEX] = TURN_OFF;
+		}
+	}
+
+#endif
+
 	return 0;
 }
 
@@ -67,6 +114,10 @@ void i2c_receive_callback()
 			i2c_send_byte(COMM_OK, 0);
 			module_status[M_5] = TURN_OFF;
 			break;
+		case M5V2_OFF:
+			i2c_send_byte(COMM_OK, 0);
+			module_status[M_52] = TURN_OFF;
+			break;
 		case M11V_OFF:
 			i2c_send_byte(COMM_OK, 0);
 			module_status[M_11] = TURN_OFF;
@@ -99,6 +150,17 @@ void i2c_receive_callback()
 			{
 				i2c_send_byte(COMM_OK, 0);
 				module_status[M_5] = TURN_ON;
+			}
+			else
+			{
+				i2c_send_byte(LOW_VOLTAGE, 0);
+			}
+			break;
+		case M5V2_ON:
+			if (eps_status.v_bat > THRESHOLD_10)
+			{
+				i2c_send_byte(COMM_OK, 0);
+				module_status[M_52] = TURN_ON;
 			}
 			else
 			{
