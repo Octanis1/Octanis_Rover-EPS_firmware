@@ -449,7 +449,11 @@ void module_set_state(int module_number, char state)
 			if(state) CLR_PIN(PORT_SC_EN, PIN_SC_EN);
 			else SET_PIN(PORT_SC_EN, PIN_SC_EN);
 			break;
+#ifdef FIRMWARE_BALLOON
+		case HOT_WIRE:
+#else
 		case BUZZER:
+#endif
 			if(state) SET_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
 			else CLR_PIN(PORT_HEATER_1_EN, PIN_HEATER_1_EN);
 			break;

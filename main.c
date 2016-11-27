@@ -137,7 +137,9 @@ int main(void)
 		ADC_update(); //get ADC values
 		eps_update_values();
 		eps_update_states(); //update eps state according to received commands and measured analog values; if necessary, trigger interrupt for powered modules before shutting them down.
+#ifndef FIRMWARE_BALLOON
 		eps_update_user_interface(); //all the status leds and buttons
+#endif
 		__bis_SR_register(CPUOFF + GIE);        // Enter LPM0 w/ interrupts
 		__no_operation();                       // Set breakpoint >>here<< and read
 	}

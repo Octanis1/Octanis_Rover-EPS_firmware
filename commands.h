@@ -16,7 +16,7 @@
 #define M11V_ON		0xB1
 #define M5V_ON		0x51
 #define M5V2_ON		0x52
-#define M11V_OFF    0xB0
+#define M11V_OFF    	0xB0
 #define M5V_OFF		0x50
 #define M5V2_OFF		0x53
 

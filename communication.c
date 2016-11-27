@@ -58,23 +58,23 @@ int mainboard_poke_iterate()
 	{
 		mainboard_poke_counter = 0;
 	}
-
-	if(all_systems_rebooting) //check if we can turn them on again (everything must be completely off
-								//in order to avoid pin input leakage current through GPIOS
-	{
-		if(module_status[M_5_OLIMEX] == MODULE_OFF)
+	#ifndef FIRMWARE_BALLOON
+		if(all_systems_rebooting) //check if we can turn them on again (everything must be completely off
+									//in order to avoid pin input leakage current through GPIOS
 		{
-			turn_on_all_rover_modules();
-			mainboard_poke_counter = 0;
-			mainboard_reset_counter = 0; //just to be sure
-			all_systems_rebooting = 0;
+			if(module_status[M_5_OLIMEX] == MODULE_OFF)
+			{
+				turn_on_all_rover_modules();
+				mainboard_poke_counter = 0;
+				mainboard_reset_counter = 0; //just to be sure
+				all_systems_rebooting = 0;
+			}
+			else if(module_status[M_5_OLIMEX] == MODULE_ON) //if it was not fully on before, we have to switch it off now!
+			{
+				module_status[M_5_OLIMEX] = TURN_OFF;
+			}
 		}
-		else if(module_status[M_5_OLIMEX] == MODULE_ON) //if it was not fully on before, we have to switch it off now!
-		{
-			module_status[M_5_OLIMEX] = TURN_OFF;
-		}
-	}
-
+	#endif
 #endif
 
 	return 0;
@@ -121,6 +121,21 @@ void i2c_receive_callback()
 		case M11V_OFF:
 			i2c_send_byte(COMM_OK, 0);
 			module_status[M_11] = TURN_OFF;
+			break;
+		case HEAT_1_OFF:
+			module_set_state(HOT_WIRE, 0); //turn off immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[HOT_WIRE] = MODULE_OFF;
+			break;
+		case HEAT_2_OFF:
+			module_set_state(H_T2, 0); //turn on immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[H_T2] = MODULE_OFF;
+			break;
+		case HEAT_3_OFF:
+			module_set_state(H_T2, 0); //turn on immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[H_T2] = MODULE_OFF;
 			break;
 		// turn on module
 		case M3V3_1_ON:
@@ -177,6 +192,21 @@ void i2c_receive_callback()
 			{
 				i2c_send_byte(LOW_VOLTAGE, 0);
 			}
+			break;
+		case HEAT_1_ON:
+			module_set_state(HOT_WIRE, 1); //turn on immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[HOT_WIRE] = MODULE_ON;
+			break;
+		case HEAT_2_ON:
+			module_set_state(H_T2, 1); //turn on immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[H_T2] = MODULE_ON;
+			break;
+		case HEAT_3_ON:
+			module_set_state(H_T2, 1); //turn on immediately!
+			i2c_send_byte(COMM_OK, 0);
+			module_status[H_T2] = MODULE_ON;
 			break;
 		//return analog values
 		case V_BAT:

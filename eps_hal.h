@@ -9,6 +9,7 @@
 #define EPS_HAL_H_
 
 //#define FIRMWARE_BASE_STATION 	1
+#define FIRMWARE_BALLOON
 
 #include <msp430fr5969.h>
 
@@ -30,10 +31,19 @@
 	#define M_5_GPS			M_5
 	#define M_5_RPI			M_11
 #else
+#ifndef FIRMWARE_BALLOON
 	#define M_5_OLIMEX		M_5
+#else
+	//dont treat any of the outputs special with boot sequence etc.
+#endif
 #endif
 #define M_DIRECT		7
-#define BUZZER		8
+#ifndef FIRMWARE_BALLOON
+	#define BUZZER		8
+#else
+	#define BUZZER 		10 //Buzzer NOT USED!!!
+	#define HOT_WIRE 	8
+#endif
 #define H_T2			9
 #define 	H_T3			10
 

@@ -89,6 +89,7 @@ void eps_update_states()
 			}
 #else
 			// wait for shutdown and turn off module
+	#ifndef FIRMWARE_BALLOON
 			if(i==M_5_OLIMEX)
 			{
 				if(module_update_shutdown_signal(M_5_OLIMEX, START_SHUTDOWN) == SHUTDOWN_COMPLETE)
@@ -100,6 +101,9 @@ void eps_update_states()
 					module_set_state(BUZZER, 0);
 				}
 			}
+	#else
+			if(0){}
+	#endif
 #endif
 			else
 			{
@@ -125,6 +129,8 @@ void eps_update_states()
 			}
 #else
 			// wait till boot complete before changing internal state
+	#ifndef FIRMWARE_BALLOON
+
 			if(i==M_5_OLIMEX)
 			{
 				module_set_state(M_5_OLIMEX, 1);
@@ -136,6 +142,9 @@ void eps_update_states()
 					module_set_state(BUZZER, 0);
 				}
 			}
+	#else
+		if(0) {}
+	#endif
 #endif
 			else
 			{
@@ -251,7 +260,7 @@ void eps_update_states()
 	}
 
 #ifndef FIRMWARE_BASE_STATION
-
+#ifndef FIRMWARE_BALLOON
 	// TURN ON all systems if battery is again sufficiently charged:
 	if(module_status[M_5_OLIMEX] == MODULE_OFF
 			&& eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS
@@ -259,7 +268,7 @@ void eps_update_states()
 	{
 		turn_on_all_rover_modules();
 	}
-
+#endif
 #else
 	// Workaround for ESD problem (if Raspi shuts down by accident)
 	static int rpi_off_timeout = 0;
@@ -460,11 +469,12 @@ void eps_update_user_interface()
 	}
 
 	//check that Olimex is in correct state (might not be because wait for boot not respected):
+#ifndef FIRMWARE_BALLOON
 	if(system_on_off == 1 && module_status[M_5_OLIMEX] == MODULE_OFF && eps_status.v_bat > SYSTEMS_THRESHOLD + THRESHOLD_MODULE_HYS)
 		module_status[M_5_OLIMEX] = TURN_ON;
 	else if(system_on_off == 0 && module_status[M_5_OLIMEX] == MODULE_ON)
 		module_status[M_5_OLIMEX] = TURN_OFF;
-
+#endif
 	//check if everyting is off and switch is on position off -> go to sleep!
 	if(system_on_off == 0 && (PORT_DIGITAL_IN & PIN_BUTTON) == 1)
 	{
@@ -536,7 +546,11 @@ void turn_on_all_rover_modules()
 	timer_delay100(1);
 
 	if(eps_status.v_bat > ALL_OFF_THRESHOLD + THRESHOLD_MODULE_HYS
+#ifndef FIRMWARE_BALLOON
 			&& (PORT_DIGITAL_IN & PIN_BUTTON) == 0) // switch is position: on
+#else
+		)
+#endif
 	{
 		//needed at startup!
 		button_state = 1;
@@ -562,10 +576,11 @@ void turn_on_all_rover_modules()
 		module_status[M_52] = MODULE_ON;
 
 		timer_delay100(2);
-
+#ifndef FIRMWARE_BALLOON
 		//enable Olimex
 		module_set_state(M_5_OLIMEX, 1);
 		module_status[M_5_OLIMEX] = TURN_ON;
+#endif
 		//enable Lidar logic
 		module_set_state(M_331, 1);
 		module_status[M_331] = MODULE_ON;
